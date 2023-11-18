@@ -1,6 +1,5 @@
 import json
 import logging
-import time
 
 from flask import Flask, request, render_template, send_from_directory, jsonify
 from flask_socketio import SocketIO
@@ -25,6 +24,7 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
 excel_handler = ExcelHandler('data.xlsx')
 
 llm_result = {}
+ocr_result = {}
 
 
 @app.route('/')
@@ -54,6 +54,18 @@ def handle_icon_click():
     excel_handler.save_dataframe_to_excel()
 
     return jsonify({'status': 'success'})
+
+
+@app.route('/text', methods=['POST'])
+def handle_request():
+    data = request.json
+    filename = data['filename']
+    page = data['page']
+
+    if not f"{filename}_{page}" in ocr_result:
+        return jsonify({'status': 'error', 'msg': f'{filename}和{page}没有对应的数据'})
+
+    return jsonify({'status': 'success', 'text': ocr_result[f"{filename}_{page}"]})
 
 
 @app.route('/test')
@@ -97,9 +109,8 @@ def process_data_and_emit_progress(filename):
         reader = PdfReader(file)
         num_pages = len(reader.pages)
 
-        for i in range(num_pages):
-            page_no = i + 1
-            page = reader.pages[i]
+        for page_no in range(1, num_pages+1):
+            page = reader.pages[page_no-1]
             text = page.extract_text()
 
             if not text or len(text) < 30:  # 扫描件
@@ -108,7 +119,8 @@ def process_data_and_emit_progress(filename):
             progress += 50 * (page_no / num_pages)
             info_progress(progress, f"提取发票要素({page_no}/{num_pages}页)...")
             ret = extract_invoice(text, filename)
-            # 将ret保存到字典llm_result，key为filename+page_no，value为ret
+            # 将原始text和ret保存到字典llm_result，key为filename+page_no
+            ocr_result[f"{filename}_{page_no}"] = text
             llm_result[f"{filename}_{page_no}"] = ret
             info_data(ret, page_no)
 

@@ -66,7 +66,7 @@
 
 h3 {
   text-align: center;
-  margin: 20px 0;
+  margin: 10px 5px;
   color: #333;
   font-family: Arial, sans-serif;
 }
@@ -84,12 +84,12 @@ h3 {
 
 /* 第一列样式 */
 .data-table td:first-child, .data-table th:first-child {
-  color: #df3079; /* 第一列颜色 */
+  color: #DE4248; /* 第一列颜色 */
 }
 
 /* 第二列样式 */
 .data-table td:nth-child(2), .data-table th:nth-child(2) {
-  color: #00a67d; /* 第二列颜色 */
+  color: #4AA480; /* 第二列颜色 */
 }
 
 /* 其他样式保持不变 */
@@ -113,11 +113,11 @@ h3 {
 
 /* 调整行的奇偶背景色 */
 .data-table tr:nth-child(odd) {
-  background-color: #282c34;
+  background-color: #000000;
 }
 
 .data-table tr:nth-child(even) {
-  background-color: #2c313a;
+  background-color: #000000;
 }
 
 /* 表格滚动条样式（仅适用于 Webkit 浏览器） */
@@ -155,4 +155,36 @@ h3 {
 
 .icon-clicked {
   stroke: #0815a7
+}
+
+/* 非模态窗口样式 */
+.float-window {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  right: 10px; /* 距离右边的位置 */
+  top: 10px; /* 距离顶部的位置 */
+  width: 300px; /* 宽度 */
+  background-color: #fefefe;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  padding: 20px;
+  border-radius: 5px;
+}
+
+.float-window-content {
+  /* 内容样式 */
+} 
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
 }

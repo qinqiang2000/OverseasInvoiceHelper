@@ -16,7 +16,19 @@ function log(...args) {
   console.log(`[${timestamp}]`, ...args);
 }
 
+
+
 document.addEventListener('DOMContentLoaded', function () {
+  // 获取非模态窗口元素
+  var floatWindow = document.getElementById("floatWindow");
+  log('获取非模态窗口元素', floatWindow);
+  // 获取关闭按钮元素
+  var span = document.getElementsByClassName("close")[0];
+  // 关闭非模态窗口
+  span.onclick = function () {
+    floatWindow.style.display = "none";
+  }
+
   var socket = io.connect('http://' + '127.0.0.1' + ':' + '8000');
 
   socket.on('connect', function () {
@@ -84,10 +96,41 @@ document.addEventListener('DOMContentLoaded', function () {
     // 创建表格标题
     const title = document.createElement('h3');
     title.textContent = `第 ${page} 页`;
+    title.setAttribute('page', page);
+    title.addEventListener('click', function () {
+      getPageText(this);
+    });
+
     container.appendChild(title);
 
     // 将表格添加到容器
     container.appendChild(table);
+  }
+
+  // 获取后端返回的中间文本
+  function getPageText(titleElement) {
+    page = titleElement.getAttribute('page');
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/text', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send(JSON.stringify({ page: page, filename: currentFilename }));
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        var response = JSON.parse(xhr.responseText);
+        if (response.status === 'success') {
+          var newWindow = window.open('', '_blank');
+          newWindow.document.write('<html><head><title>数据展示</title><style>p { white-space: pre-wrap; }</style></head><body>');
+          newWindow.document.write('<h1>数据</h1>');
+          newWindow.document.write('<p>' + response.text + '</p>'); // 假设 responseData 是您通过 AJAX 获取的数据
+          newWindow.document.write('</body></html>');
+          newWindow.document.close();
+        } else {
+          alert(response.msg);
+        }
+      } else {
+        alert('无法发送data到后台');
+      }
+    };
   }
 
   // 发送点击图标的数据到后台 
@@ -202,3 +245,4 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('second-file-upload').click();
   });
 });
+
