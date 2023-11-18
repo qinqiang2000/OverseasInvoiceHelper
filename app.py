@@ -9,6 +9,7 @@ import os
 from data import ExcelHandler
 from llm import extract_invoice
 from ocr import pdf_ocr
+import llm
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
@@ -45,9 +46,10 @@ def handle_icon_click():
         return jsonify({'status': 'error', 'msg': f'{filename}和{page}没有对应的数据'})
 
     ret = llm_result[f"{filename}_{page}"]
+    raw = ocr_result[f"{filename}_{page}"]
 
     if clicked:
-        excel_handler.add_key_to_down(filename, page, ret, key)
+        excel_handler.add_key_to_down(filename, page, ret, key, raw)
     else:
         excel_handler.remove_key_from_down(filename, page, key)
 
@@ -56,8 +58,23 @@ def handle_icon_click():
     return jsonify({'status': 'success'})
 
 
+@app.route('/switch_channel', methods=['POST'])
+def switch_channel():
+    data = request.json
+    channel = int(data['channel'])
+    app.logger.debug(f"switch_channel: {channel}")
+
+    values = tuple(item.value for item in llm.Channel)
+    if channel not in values:
+        return jsonify({'status': 'fail', 'msg': f'频道 {channel} 切换失败'})
+
+    llm.switch_channel(channel)
+    app.logger.info(f"切换到频道 {llm.Channel(channel)}")
+    return jsonify({'status': 'success', 'msg': f'频道 {llm.Channel(channel)} 切换成功'})
+
+
 @app.route('/text', methods=['POST'])
-def handle_request():
+def get_raw_test():
     data = request.json
     filename = data['filename']
     page = data['page']
@@ -66,11 +83,6 @@ def handle_request():
         return jsonify({'status': 'error', 'msg': f'{filename}和{page}没有对应的数据'})
 
     return jsonify({'status': 'success', 'text': ocr_result[f"{filename}_{page}"]})
-
-
-@app.route('/test')
-def test():
-    return render_template('test.html')
 
 
 @app.route('/upload', methods=['POST'])
@@ -119,13 +131,14 @@ def process_data_and_emit_progress(filename):
             progress += 50 * (page_no / num_pages)
             info_progress(progress, f"提取发票要素({page_no}/{num_pages}页)...")
             ret = extract_invoice(text, filename)
+
             # 将原始text和ret保存到字典llm_result，key为filename+page_no
             ocr_result[f"{filename}_{page_no}"] = text
             llm_result[f"{filename}_{page_no}"] = ret
             info_data(ret, page_no)
 
     app.logger.debug(f"处理完成")
-    info_progress(100, '处理完成')
+    info_progress(100, 'done')
 
 
 # ocr. 先写到一个pdf，在读（待优化）

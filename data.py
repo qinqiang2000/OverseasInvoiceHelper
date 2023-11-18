@@ -10,7 +10,7 @@ class ExcelHandler:
     def load_excel_to_dataframe(self):
         if not os.path.exists(self.file_path):
             # 创建一个新的 DataFrame 并设置列名
-            df = pd.DataFrame(columns=['filename', 'page', 'result', 'down'])
+            df = pd.DataFrame(columns=['filename', 'page', 'result', 'down', 'raw'])
             # 保存这个新的空白 DataFrame 到 Excel 文件
             df.to_excel(self.file_path, index=False, engine='openpyxl')
             return df
@@ -24,7 +24,7 @@ class ExcelHandler:
     def save_dataframe_to_excel(self):
         self.df.to_excel(self.file_path, index=False, engine='openpyxl')
 
-    def add_key_to_down(self, filename, page, ret, key):
+    def add_key_to_down(self, filename, page, ret, key, raw=""):
         match = self.df[(self.df['filename'] == filename) & (self.df['page'] == page)]
 
         if not match.empty:
@@ -34,7 +34,7 @@ class ExcelHandler:
                 current_down.append(key)
             self.df.at[row_index, 'down'] = current_down
         else:
-            new_row = {'filename': filename, 'page': page, 'result': ret, 'down': [key]}
+            new_row = {'filename': filename, 'page': page, 'result': ret, 'down': [key], 'raw': raw}
             self.df = self.df._append(new_row, ignore_index=True)
 
     def remove_key_from_down(self, filename, page, key):

@@ -28,7 +28,7 @@
 
 #table-container {
   flex-grow: 1; /* 让内容部分占据大部分空间 */
-  overflow-y: auto; /* 内容过多时允许滚动 */
+  /*overflow-y: auto;*/ /* 内容过多时允许滚动 */
 }
 
 #second-upload-form {
@@ -41,13 +41,14 @@
 
 #progress-container-wrapper {
   width: 100%;
-
+  flex-grow: 1;
   text-align: center;
 }
 
 #progress-container {
   width: 100%;
   background-color: #ddd;
+  flex-grow: 1;
   /* 其他样式 */
 }
 

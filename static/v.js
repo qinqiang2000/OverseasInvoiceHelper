@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
     socket.emit('start_data_transfer');  // 告知服务器开始数据传输
   });
 
+  // 进度处理
   socket.on('progress', function (data) {
     log('Progress: ' + JSON.stringify(data));
 
@@ -34,9 +35,11 @@ document.addEventListener('DOMContentLoaded', function () {
       document.getElementById('progress-status').textContent = data.status;
 
     // 当进度完成时,隐藏进度条
-    if (data.progress >= 100) {
+    if (data.status == "done") {
+      log('Progress: done');
       document.getElementById('progress-container-wrapper').style.display = 'none';
       document.getElementById('progress-status').style.display = 'none';
+      document.getElementById('second-upload-form').style.display = 'block';
     }
   });
 
@@ -180,7 +183,6 @@ document.addEventListener('DOMContentLoaded', function () {
         var embedTag = '<embed src="/uploads/' + uploadedFileName + '" type="application/pdf" width="100%" height="100%" />';
         pdfViewer.innerHTML = embedTag;
 
-        document.getElementById('second-upload-btn').style.display = 'block';
         document.getElementById('json-viewer').style.display = 'block';
 
       } else {
