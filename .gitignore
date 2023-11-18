@@ -1,0 +1,19 @@
+# 忽略所有日志文件  
+*.log  
+
+*.pdf
+  
+# 忽略目标目录  
+target/  
+  
+# 忽略Python编译文件  
+*.pyc  
+  
+# 忽略PyCharm项目文件  
+.idea/
+
+# 忽略VSCode工作区目录
+.vscode/
+
+# 忽略VSCode工作区文件
+*.code-workspace

@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>PDF 预览</title>
+    <link rel="stylesheet" type="text/css" href="static/style.css">
+</head>
+
+<body>
+    <div id="container" class="container">
+        <div id="pdf-viewer" class="panel">
+            <!-- 这里可以放置一个提示或者占位符 -->
+            <form id="upload-form" enctype="multipart/form-data" style="text-align: center; margin-top: 20px;">
+                <input type="file" name="file" id="file-upload" style="display: none;">
+                <button type="button" id="upload-btn">请上传发票</button>
+            </form>
+        </div>
+        <div id="gutter" class="gutter"></div>
+        <div id="json-viewer" class="panel" style="display: none;">
+            <!-- 进度条容器 -->
+            <div id="progress-container-wrapper">
+                <div id="progress-container" style="width: 100%; background-color: #ddd;">
+                    <div id="progressBar" style="width: 0%; height: 20px; background-color: #4CAF50;"></div>
+                </div>
+                <p id="progress-status" style="text-align: center;">处理中...</p> <!-- 状态信息 -->
+            </div>
+
+            <!-- 表格容器 -->
+            <div id="table-container" style="display: none;">
+                <table id="json-table">
+                    <!-- JSON 表格将在这里生成 -->
+                </table>
+            </div>
+
+
+            <!-- 第二个文件上传表单 -->
+            <form id="second-upload-form" enctype="multipart/form-data">
+                <input type="file" name="file" id="second-file-upload" style="display: none;">
+                <button type="button" id="second-upload-btn">上传其他文件</button>
+            </form>
+        </div>
+
+
+    </div>
+
+    <script src="https://cdn.socket.io/3.1.3/socket.io.js"></script>
+    <script src="static/v.js"></script>
+</body>
+
+</html>

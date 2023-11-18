@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head>
+  <title>上传 PDF 文件</title>
+  <script type="text/javascript">
+    function submitForm() {
+      document.getElementById("uploadForm").submit();
+    }
+  </script>
+</head>
+<body>
+  <h1>请上传海外发票</h1>
+  <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" onchange="submitForm()">
+  </form>
+</body>
+</html>

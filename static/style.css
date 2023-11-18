@@ -1,0 +1,153 @@
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+.panel {
+  overflow: auto;
+}
+
+#gutter {
+  background: #aaa;
+  width: 5px; /* 拖动手柄的宽度 */
+  cursor: ew-resize;
+}
+
+#pdf-viewer {
+  width: 70%;
+}
+
+/* ...原有样式... */
+
+#json-viewer {
+  display: flex;
+  height: 100%;
+  width: 30%;
+}
+
+
+#second-upload-form {
+  position: absolute; 
+  bottom: 10px; /* 底部对齐 */
+  right: 10%;
+  text-align: center;
+}
+
+
+#progress-container-wrapper {
+  width: 100%;
+
+  text-align: center;
+}
+
+#progress-container {
+  width: 100%;
+  background-color: #ddd;
+  /* 其他样式 */
+}
+
+#table-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 垂直居中子元素 */
+  align-items: center; /* 水平居中子元素 */
+  height: 100%;
+}
+
+h3 {
+  text-align: center;
+  margin: 20px 0;
+  color: #333;
+  font-family: Arial, sans-serif;
+}
+
+/* 表格的基本样式 */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #282c34; /* 暗色背景 */
+  color: #f8f8f2; /* 浅色文本 */
+  font-family: "Söhne Mono", Monaco, "Andale Mono", "Ubuntu Mono", monospace !important; /* 代码风格字体 */
+  font-size: 13px; /* 设置字体大小 */
+  margin-bottom: 20px;
+}
+
+/* 第一列样式 */
+.data-table td:first-child, .data-table th:first-child {
+  color: #df3079; /* 第一列颜色 */
+}
+
+/* 第二列样式 */
+.data-table td:nth-child(2), .data-table th:nth-child(2) {
+  color: #00a67d; /* 第二列颜色 */
+}
+
+/* 其他样式保持不变 */
+
+.data-table th, .data-table td {
+  border: 1px solid #3c3f41;
+  padding: 8px;
+  text-align: left;
+}
+
+/* 表头样式 */
+.data-table thead th {
+  background-color: #21252b; /* 暗色背景 */
+  color: #61afef; /* 浅蓝色文本 */
+}
+
+/* 表格行的悬停效果 */
+.data-table tr:hover {
+  background-color: #32363e;
+}
+
+/* 调整行的奇偶背景色 */
+.data-table tr:nth-child(odd) {
+  background-color: #282c34;
+}
+
+.data-table tr:nth-child(even) {
+  background-color: #2c313a;
+}
+
+
+
+/* 表格滚动条样式（仅适用于 Webkit 浏览器） */
+#json-viewer::-webkit-scrollbar {
+  width: 8px;
+}
+
+#json-viewer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+#json-viewer::-webkit-scrollbar-thumb {
+  background: #888;
+}
+
+#json-viewer::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+#upload-form {
+  text-align: center;
+  margin-top: 20px;
+  margin-bottom: 10px; /* 保持一些底部间距 */
+}
+
+#upload-btn, #second-upload-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+#upload-btn:hover {
+    background-color: #45a049;
+}
+
+
+
