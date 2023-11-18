@@ -16,19 +16,7 @@ function log(...args) {
   console.log(`[${timestamp}]`, ...args);
 }
 
-
-
 document.addEventListener('DOMContentLoaded', function () {
-  // 获取非模态窗口元素
-  var floatWindow = document.getElementById("floatWindow");
-  log('获取非模态窗口元素', floatWindow);
-  // 获取关闭按钮元素
-  var span = document.getElementsByClassName("close")[0];
-  // 关闭非模态窗口
-  span.onclick = function () {
-    floatWindow.style.display = "none";
-  }
-
   var socket = io.connect('http://' + '127.0.0.1' + ':' + '8000');
 
   socket.on('connect', function () {
