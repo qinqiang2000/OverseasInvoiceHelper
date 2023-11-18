@@ -19,6 +19,7 @@ target/
 *.code-workspace
 
 # 忽略Excel临时文件
+~$*
 *~
 *.xlk
 *.bak

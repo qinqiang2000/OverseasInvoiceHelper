@@ -41,9 +41,15 @@ class ExcelHandler:
     def remove_key_from_down(self, filename, page, key):
         match = self.df[(self.df['filename'] == filename) & (self.df['page'] == page)]
 
-        if not match.empty:
-            row_index = match.index[0]
-            current_down = match.at[row_index, 'down']
-            if key in current_down:
-                current_down.remove(key)
+        if match.empty:
+            return
+
+        row_index = match.index[0]
+        current_down = match.at[row_index, 'down']
+        if key in current_down:
+            current_down.remove(key)
+        # 如果current_down为空，删除这一行
+        if not current_down:
+            self.df.drop(index=row_index, inplace=True)
+        else:
             self.df.at[row_index, 'down'] = current_down
