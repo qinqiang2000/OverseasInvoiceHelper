@@ -7,6 +7,7 @@ from flask_socketio import SocketIO
 from PyPDF2 import PdfReader, PdfWriter
 import os
 
+from data import ExcelHandler
 from llm import extract_invoice
 from ocr import pdf_ocr
 
@@ -20,10 +21,39 @@ socketio = SocketIO(app)
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
+# 保存标注数据到excel文件
+excel_handler = ExcelHandler('data.xlsx')
+
+llm_result = {}
+
 
 @app.route('/')
 def index():
     return render_template('pdf_viewer.html', filename=None)
+
+
+# 处理标注的数据（哪一个文件，哪一页的哪个要素识别不好）
+@app.route('/down', methods=['POST'])
+def handle_icon_click():
+    data = request.json
+    filename = data['filename']
+    page = data['page']
+    key = data['key']
+    clicked = data['clicked']
+
+    if not f"{filename}_{page}" in llm_result:
+        return jsonify({'status': 'error', 'msg': f'{filename}和{page}没有对应的数据'})
+
+    ret = llm_result[f"{filename}_{page}"]
+
+    if clicked:
+        excel_handler.add_key_to_down(filename, page, ret, key)
+    else:
+        excel_handler.remove_key_from_down(filename, page, key)
+
+    excel_handler.save_dataframe_to_excel()
+
+    return jsonify({'status': 'success'})
 
 
 @app.route('/test')
@@ -33,8 +63,6 @@ def test():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    app.logger.debug("upload_file___")
-
     if 'file' not in request.files:
         app.logger.debug("没有收到文件")
         return jsonify({'err': "没有收到文件"})
@@ -56,6 +84,10 @@ def upload_file():
         # return render_template('pdf_viewer.html', filename=filename)
 
 
+# 总体处理上传的文件：
+# 1）提取文本
+# 2）ocr（如果是图片）
+# 3）提取发票要素
 def process_data_and_emit_progress(filename):
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     with open(file_path, 'rb') as file:
@@ -70,37 +102,38 @@ def process_data_and_emit_progress(filename):
             page = reader.pages[i]
             text = page.extract_text()
 
-            if text:
-                progress += 50 * (page_no / num_pages)
-                info_progress(progress, f"提取发票要素({page_no}/{num_pages}页)...")
-                socketio.sleep(2)  # 模拟耗时操作
-                info_data(extract_invoice(text, filename), page_no)
-                continue
+            if not text or len(text) < 30:  # 扫描件
+                text, progress = ocr(file_path, page, progress, page_no, num_pages)
 
-            # todo: page直接传给oc
-            app.logger.debug(f"正在用OCR提取文本({page_no}/{num_pages})...")
-            progress += 20 * (page_no / num_pages)
-            info_progress(progress, f"正在用OCR提取文本({page_no}/{num_pages}页)...")
-            writer = PdfWriter()
-            writer.add_page(page)
-
-            src_filename = os.path.basename(file_path)
-            dest_filename = f"{os.path.splitext(src_filename)[0]}_{i + 1}.pdf"
-            dest_path = os.path.join(app.config['UPLOAD_FOLDER'], 'tmp', dest_filename)
-
-            with open(dest_path, 'wb') as output_pdf:
-                writer.write(output_pdf)
-
-            app.logger.debug(f"准备OCR({page_no}/{num_pages}页):{dest_path}")
-            text = pdf_ocr(dest_path)
-            print(f"======OCR=======\n{text}")
             progress += 50 * (page_no / num_pages)
             info_progress(progress, f"提取发票要素({page_no}/{num_pages}页)...")
-            socketio.sleep(2)  # 模拟耗时操作
-            info_data(extract_invoice(text, filename), page_no)
+            ret = extract_invoice(text, filename)
+            # 将ret保存到字典llm_result，key为filename+page_no，value为ret
+            llm_result[f"{filename}_{page_no}"] = ret
+            info_data(ret, page_no)
 
     app.logger.debug(f"处理完成")
     info_progress(100, '处理完成')
+
+
+# ocr. 先写到一个pdf，在读（待优化）
+def ocr(file_path, page, progress, page_no, num_pages):
+    writer = PdfWriter()
+    writer.add_page(page)
+
+    src_filename = os.path.basename(file_path)
+    dest_filename = f"{os.path.splitext(src_filename)[0]}_{page_no}.pdf"
+    dest_path = os.path.join(app.config['UPLOAD_FOLDER'], 'tmp', dest_filename)
+
+    with open(dest_path, 'wb') as output_pdf:
+        writer.write(output_pdf)
+
+    app.logger.debug(f"准备OCR({page_no}/{num_pages}页):{dest_path}")
+    progress += 20 * (page_no / num_pages)
+    info_progress(progress, f"正在用OCR提取文本({page_no}/{num_pages}页)...")
+    text = pdf_ocr(dest_path)
+
+    return text, progress
 
 
 @app.route('/uploads/<filename>')
@@ -122,4 +155,4 @@ def info_data(data, page):
 
 
 if __name__ == '__main__':
-    socketio.run(app, allow_unsafe_werkzeug=True, port=8000, debug=True)
+    socketio.run(app, allow_unsafe_werkzeug=True, port=8000)

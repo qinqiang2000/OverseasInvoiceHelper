@@ -17,3 +17,11 @@ target/
 
 # 忽略VSCode工作区文件
 *.code-workspace
+
+# 忽略Excel临时文件
+*~
+*.xlk
+*.bak
+*.tmp
+*.xlsb
+*.xlsm.backup
