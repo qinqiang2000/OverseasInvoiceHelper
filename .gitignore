@@ -2,7 +2,9 @@
 *.log  
 
 *.pdf
-  
+
+.env
+
 # 忽略目标目录  
 target/  
   
