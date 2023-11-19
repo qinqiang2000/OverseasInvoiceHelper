@@ -107,7 +107,10 @@ def upload_file():
         app.logger.debug(f"收到{file.filename}")
         # filename = secure_filename(file.filename)
         filename = file.filename
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(os.path.dirname(file_path)):
+            os.makedirs(os.path.dirname(file_path))
+        file.save(file_path)
 
         socketio.start_background_task(process_data_and_emit_progress, filename)
         app.logger.debug(f"保存{file.filename}")
@@ -129,8 +132,8 @@ def process_data_and_emit_progress(filename):
         reader = PdfReader(file)
         num_pages = len(reader.pages)
 
-        for page_no in range(1, num_pages+1):
-            page = reader.pages[page_no-1]
+        for page_no in range(1, num_pages + 1):
+            page = reader.pages[page_no - 1]
             text = page.extract_text()
 
             if not text or len(text) < 30:  # 扫描件
@@ -145,8 +148,16 @@ def process_data_and_emit_progress(filename):
             llm_result[f"{filename}_{page_no}"] = anno_result[f"{filename}_{page_no}"] = ret
 
             # 持久化
-            excel_handler.add_row_to_dataframe({'filename': filename, 'page': page_no,
-                                                'result': ret, 'anno': ret, 'down': [], 'raw': text})
+            match = excel_handler.match(filename, page_no)
+            if not match.empty:
+                row_index = match.index[0]
+                anno_result[f"{filename}_{page}"] = match.at[row_index, 'anno']
+                match.at[row_index, 'result'] = ret
+                match.at[row_index, 'down'] = []
+                match.at[row_index, 'raw'] = text
+            else:
+                excel_handler.add_row_to_dataframe({'filename': filename, 'page': page_no,
+                                                    'result': ret, 'anno': ret, 'down': [], 'raw': text})
             excel_handler.save_dataframe_to_excel()
 
             info_data(ret, page_no)
@@ -175,8 +186,10 @@ def ocr(file_path, page, progress, page_no, num_pages):
     return text, progress
 
 
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
+@app.route('/uploaded', methods=['GET'])
+def uploaded_file():
+    filename = request.args.get('filepath')
+    app.logger.debug(f"Get: {filename}")
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 

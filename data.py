@@ -33,6 +33,10 @@ class ExcelHandler:
     def save_dataframe_to_excel(self):
         self.df.to_excel(self.file_path, index=False, engine='openpyxl')
 
+    def match(self, filename, page):
+        match = self.df[(self.df['filename'] == filename) & (self.df['page'] == page)]
+        return match
+
     def update_row(self, filename, page, ret, anno, key, raw=""):
         match = self.df[(self.df['filename'] == filename) & (self.df['page'] == page)]
 

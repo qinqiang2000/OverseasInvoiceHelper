@@ -31,13 +31,6 @@
   /*overflow-y: auto;*/ /* 内容过多时允许滚动 */
 }
 
-#second-upload-form {
-  /* position: absolute;  */
-  /* bottom: 10px; */
-  margin-top: 10px;
-  text-align: center;
-}
-
 
 #progress-container-wrapper {
   width: 100%;
@@ -52,7 +45,18 @@
   /* 其他样式 */
 }
 
-#upload-btn, #second-upload-btn {
+#second-upload-form {
+  /* position: absolute;  */
+  /* bottom: 10px; */
+  /* margin-top: 10px; */
+  /* text-align: center; */
+  display: flex;
+  flex-direction: row; /* 确保子元素水平排列 */
+  align-items: center; /* 如有必要，可以垂直居中对齐 */
+  margin-right: 10px; /* 按钮间隔 */
+}
+
+#upload-btn, #second-upload-btn, #next-upload-btn{
   display: block; /* 使按钮成为块级元素 */
   margin: 0 auto; /* 自动外边距实现水平居中 */
 
@@ -63,6 +67,10 @@
   border-radius: 4px;
   cursor: pointer;
   font-size: 16px;
+}
+
+#second-upload-form button {
+  margin-top: 10px; /* 在按钮之间添加一些间距 */
 }
 
 h3 {
