@@ -2,7 +2,8 @@
 *.log  
 
 *.pdf
-
+*.xlsx
+*.xls
 .env
 
 # 忽略目标目录  

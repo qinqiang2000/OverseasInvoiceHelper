@@ -24,8 +24,10 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
 # 保存标注数据到excel文件
 excel_handler = ExcelHandler('data.xlsx')
 
+# 缓存ocr、llm提取和标注的结果。todo：去掉这一层，直接写持久层
 llm_result = {}
 ocr_result = {}
+anno_result = {}
 
 
 @app.route('/')
@@ -33,13 +35,14 @@ def index():
     return render_template('pdf_viewer.html', filename=None)
 
 
-# 处理标注的数据（哪一个文件，哪一页的哪个要素识别不好）
+# 处理标注的数据（哪一个文件，哪一页的哪个要素key识别不好, 标注的值value是）
 @app.route('/down', methods=['POST'])
 def handle_icon_click():
     data = request.json
     filename = data['filename']
-    page = data['page']
+    page = int(data['page'])
     key = data['key']
+    val = data['value']
     clicked = data['clicked']
 
     if not f"{filename}_{page}" in llm_result:
@@ -48,8 +51,13 @@ def handle_icon_click():
     ret = llm_result[f"{filename}_{page}"]
     raw = ocr_result[f"{filename}_{page}"]
 
+    # anno_result[f"{filename}_{page}"]转json，然后修改key对应的值，再转回来
+    anno_json = json.loads(anno_result[f"{filename}_{page}"])
+    anno_json[key] = val
+    anno = anno_result[f"{filename}_{page}"] = json.dumps(anno_json, ensure_ascii=False, indent=4)
+
     if clicked:
-        excel_handler.add_key_to_down(filename, page, ret, key, raw)
+        excel_handler.update_row(filename, page, ret, anno, key, raw)
     else:
         excel_handler.remove_key_from_down(filename, page, key)
 
@@ -134,7 +142,13 @@ def process_data_and_emit_progress(filename):
 
             # 将原始text和ret保存到字典llm_result，key为filename+page_no
             ocr_result[f"{filename}_{page_no}"] = text
-            llm_result[f"{filename}_{page_no}"] = ret
+            llm_result[f"{filename}_{page_no}"] = anno_result[f"{filename}_{page_no}"] = ret
+
+            # 持久化
+            excel_handler.add_row_to_dataframe({'filename': filename, 'page': page_no,
+                                                'result': ret, 'anno': ret, 'down': [], 'raw': text})
+            excel_handler.save_dataframe_to_excel()
+
             info_data(ret, page_no)
 
     app.logger.debug(f"处理完成")
