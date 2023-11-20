@@ -12,7 +12,7 @@
             <!-- 这里可以放置一个提示或者占位符 -->
             <form id="upload-form" enctype="multipart/form-data" style="text-align: center; margin-top: 20px;">
                 <input type="file" name="file" id="file-upload" webkitdirectory directory multiple style="display: none;">
-                <button type="button" id="upload-btn">打开文件夹</button>
+                <button type="button" id="upload-btn" class="btn">打开文件夹</button>
             </form>
             <div>
             </div>
@@ -37,8 +37,10 @@
             <!-- 第二个文件上传表单 -->
             <form id="second-upload-form" enctype="multipart/form-data" style="display: none;">
                 <input type="file" name="file" id="second-file-upload" webkitdirectory directory multiple style="display: none;">
-                <button type="button" id="next-upload-btn" >下一个文件</button>
-                <button type="button" id="second-upload-btn" style="display: none;">上传其他文件</button>
+                
+                <button type="button" id="reload-upload-btn" class="btn">重新识别</button>
+                <button type="button" id="next-upload-btn"  class="btn">下一个文件</button>
+                <button type="button" id="second-upload-btn"  class="btn" style="display: none;">上传其他文件</button>
             </form>
 
         </div>

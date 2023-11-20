@@ -7,11 +7,24 @@ import requests
 from openai import OpenAI
 from dotenv import load_dotenv
 from enum import Enum
+from opencc import OpenCC
 
 
 load_dotenv(override=True)
 client = OpenAI()
-keywords = ["packing list", "packing slip", "装箱单", "attached-sheet", "WEIGHT MEMO"]
+keywords = ["packing list", "packing slip", "装箱单", "attached-sheet", "WEIGHT MEMO", "清单明细", '清單明', "装箱明细"]
+
+cc = OpenCC('s2t')  # s2t 表示从简体到繁体
+# 对列表中的每个简体中文词汇进行转换，并添加到原列表中
+for word in list(keywords):  # 使用 list(keywords) 创建原列表的副本以进行迭代
+    try:
+        traditional_word = cc.convert(word)
+        if traditional_word != word:  # 只有当转换后的词与原词不同时才添加
+            keywords.append(traditional_word)
+    except Exception as e:
+        print(f"转换时出错: {e}")
+
+print(keywords)
 
 template = """
 根据用户给出的内容，提取特定信息并以JSON格式返回。执行以下步骤：
@@ -116,7 +129,7 @@ def rpa_extract(text, reqid):
     # 调用异步函数，并等待异步函数结束
     schedule_get_request(reqid=reqid)
 
-    success = sem_rpa.acquire(timeout=39)
+    success = sem_rpa.acquire(timeout=69)
     if not success:
         return json.dumps({"error": f"等待超时：{reqid}要素提取程序错误"})
 

@@ -26,6 +26,8 @@ function log(...args) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+  document.getElementById('upload-btn').focus();
+
   var socket = io.connect('http://' + '127.0.0.1' + ':' + '8000');
 
   socket.on('connect', function () {
@@ -48,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
       log('Progress: done');
       document.getElementById('progress-container-wrapper').style.display = 'none';
       document.getElementById('progress-status').style.display = 'none';
-      document.getElementById('second-upload-form').style.display = 'block';
+      document.getElementById('second-upload-form').style.display = 'flex';
     }
   });
 
@@ -197,6 +199,8 @@ document.addEventListener('DOMContentLoaded', function () {
     formData.append('file', file);
     log('开始上传文件', file);
 
+    document.getElementById('second-upload-form').style.display = 'none';
+
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/upload', true);
     xhr.onload = function () {
@@ -238,8 +242,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const files = Array.from(elem.files);
     const filteredFiles = files.filter(file => file.name.endsWith('.pdf'));
     if (filteredFiles.length < 1) {
-        alert('请选择包含PDF文件的文件');
-        return
+      alert('请选择包含PDF文件的文件');
+      return
     }
 
     addFiles(filteredFiles);
@@ -287,12 +291,26 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('second-upload-btn').addEventListener('click', function () {
     document.getElementById('second-file-upload').click();
   });
+
+  document.getElementById('reload-upload-btn').addEventListener('click', function () {
+    // 筛选出所有已处理的元素
+    let filteredFiles = filesToUpload.filter(f => f.processed === 1);
+
+    // 获取最后一个 processed === 1 的元素
+    let lastProcessedFile = filteredFiles[filteredFiles.length - 1];
+
+    // 重新上传最后一个已处理的文件
+    if (lastProcessedFile) {
+      upload_one_file(lastProcessedFile.file);
+    }
+  });
+
   document.getElementById('next-upload-btn').addEventListener('click', function () {
     var nextFile = filesToUpload.find(f => f.processed === 0);
     if (nextFile)
       upload_one_file(nextFile.file);
-    else{
-      document.getElementById('second-upload-btn').style.display = 'block';
+    else {
+      document.getElementById('second-upload-btn').style.display = 'flex';
       alert('本次没有更多文件可粗里');
     }
   });

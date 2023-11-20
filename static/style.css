@@ -46,18 +46,13 @@
 }
 
 #second-upload-form {
-  /* position: absolute;  */
-  /* bottom: 10px; */
-  /* margin-top: 10px; */
-  /* text-align: center; */
   display: flex;
   flex-direction: row; /* 确保子元素水平排列 */
   align-items: center; /* 如有必要，可以垂直居中对齐 */
   margin-right: 10px; /* 按钮间隔 */
 }
 
-#upload-btn, #second-upload-btn, #next-upload-btn{
-  display: block; /* 使按钮成为块级元素 */
+.btn {
   margin: 0 auto; /* 自动外边距实现水平居中 */
 
   background-color: #4CAF50;
@@ -150,6 +145,7 @@ h3 {
   text-align: center;
   margin-top: 20px;
   margin-bottom: 10px; /* 保持一些底部间距 */
+  display: flex;
 }
 
 #upload-btn:hover {
