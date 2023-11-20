@@ -4,6 +4,8 @@
 *.pdf
 *.xlsx
 *.xls
+*.docx
+*.doc
 .env
 
 # 忽略目标目录  

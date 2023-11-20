@@ -4,6 +4,7 @@ var currentFilename = '';
 var filesToUpload = [];
 
 function addFiles(newFiles) {
+  filesToUpload = []
   for (var i = 0; i < newFiles.length; i++) {
     filesToUpload.push({ file: newFiles[i], processed: 0 });
   }

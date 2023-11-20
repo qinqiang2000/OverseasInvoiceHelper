@@ -1,5 +1,6 @@
 import functools
 import json
+import re
 import threading
 
 import requests
@@ -10,15 +11,13 @@ from enum import Enum
 
 load_dotenv(override=True)
 client = OpenAI()
+keywords = ["packing list", "packing slip", "装箱单", "attached-sheet", "WEIGHT MEMO"]
 
 template = """
-根据用户给出的文档内容，提取特定信息并以JSON格式返回。内容可能是发票、装箱单或其他类型。执行以下步骤：
-1. 检查文档是否标记为"packing list"、"packing slip"、"装箱单"、"attached-sheet"等，或包含这些词汇。如果是，认定为非发票并返回错误代码和文档类型（例如：{"err": "E0001", 
-"msg": /*可能的文档类型*/}）。
+根据用户给出的内容，提取特定信息并以JSON格式返回。执行以下步骤：
+1. 如果文档是发票且包含如 'page 1 of 3' 的多页信息，但缺少 "total"、"Amount"、"总金额" 等关键词，返回错误代码和相关页数（例如：{"err": "E0002", "msg": /*第几页*/}）。
 
-2. 如果文档是发票且包含如 'page 1 of 3' 的多页信息，但缺少 "total"、"Amount"、"总金额" 等关键词，返回错误代码和相关页数（例如：{"err": "E0002", "msg": /*第几页*/}）。
-
-3. 提取并记录以下信息：
+2. 提取并记录以下信息：
    - 发票编号（Invoice No.）
    - 发票日期（Invoice Date）
    - 币种（Currency）
@@ -42,9 +41,10 @@ class Channel(Enum):
     MOCK = 1
     RPA = 2
     GPT4 = 3
+    GPT35 = 4
 
 
-channel = Channel.MOCK
+channel = Channel.RPA
 rpa_server_url = 'http://127.0.0.1:9999/api/'
 sem_rpa = threading.Semaphore(0)
 rpa_result = {}
@@ -56,6 +56,9 @@ def switch_channel(new_channel):
 
 
 def extract_invoice(text, text_id=""):
+    if contains_keywords(text):
+        return json.dumps({"err": "E0001", "msg": "非发票文档"})
+
     if channel == Channel.MOCK:
         return """ {
           "Invoice No.": "4510044687",
@@ -69,8 +72,13 @@ def extract_invoice(text, text_id=""):
     elif channel == Channel.RPA:
         return rpa_extract(text, text_id)
 
+    model = "gpt-3.5-turbo-1106"
+    if channel == channel.GPT4:
+        model = "gpt-4-1106-preview"
+
+    print("使用模型API：", model, text_id)
     response = client.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model=model,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": template},
@@ -82,6 +90,17 @@ def extract_invoice(text, text_id=""):
     print(response.choices[0].message.content)
 
     return response.choices[0].message.content
+
+
+def contains_keywords(text):
+    global keywords
+    # 将关键词列表转换为正则表达式
+    # 使用 \s* 来匹配关键词中可能存在的空格或换行符
+    keywords_pattern = '|'.join([keyword.replace(" ", r"\s*") for keyword in keywords])
+    pattern = re.compile(keywords_pattern, re.IGNORECASE)
+
+    # 检查文本中是否包含关键词
+    return bool(pattern.search(text))
 
 
 def rpa_extract(text, reqid):
@@ -128,3 +147,10 @@ def send_get_request(reqid):
         # print('No data yet.')
         return False
 
+
+# text_to_check = """
+# """
+# if contains_keywords(text_to_check):
+#     print("文本包含关键词")
+# else:
+#     print("文本不包含关键词")

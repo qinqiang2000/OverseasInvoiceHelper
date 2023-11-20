@@ -8,7 +8,7 @@ import os
 
 from data import ExcelHandler
 from llm import extract_invoice
-from ocr import pdf_ocr
+from ocr import pdf_ocr, pdf_structure
 import llm
 
 app = Flask(__name__)
@@ -51,7 +51,6 @@ def handle_icon_click():
     ret = llm_result[f"{filename}_{page}"]
     raw = ocr_result[f"{filename}_{page}"]
 
-    # anno_result[f"{filename}_{page}"]转json，然后修改key对应的值，再转回来
     anno_json = json.loads(anno_result[f"{filename}_{page}"])
     anno_json[key] = val
     anno = anno_result[f"{filename}_{page}"] = json.dumps(anno_json, ensure_ascii=False, indent=4)
@@ -137,7 +136,10 @@ def process_data_and_emit_progress(filename):
             text = page.extract_text()
 
             if not text or len(text) < 30:  # 扫描件
-                text, progress = ocr(file_path, page, progress, page_no, num_pages)
+                text, progress = ocr(filename, page, progress, page_no, num_pages)
+            else: # 标准pdf也用百度的ppstructure来搞
+                text, progress = ocr(filename, page, progress, page_no, num_pages, structure=True)
+
 
             progress += 50 * (page_no / num_pages)
             info_progress(progress, f"提取发票要素({page_no}/{num_pages}页)...")
@@ -167,13 +169,15 @@ def process_data_and_emit_progress(filename):
 
 
 # ocr. 先写到一个pdf，在读（待优化）
-def ocr(file_path, page, progress, page_no, num_pages):
+def ocr(file_path, page, progress, page_no, num_pages, structure=False):
     writer = PdfWriter()
     writer.add_page(page)
 
-    src_filename = os.path.basename(file_path)
-    dest_filename = f"{os.path.splitext(src_filename)[0]}_{page_no}.pdf"
+    file_base, file_extension = os.path.splitext(file_path)
+    dest_filename = f"{file_base}_{page_no}{file_extension}"
     dest_path = os.path.join(app.config['UPLOAD_FOLDER'], 'tmp', dest_filename)
+    if not os.path.exists(os.path.dirname(dest_path)):
+        os.makedirs(os.path.dirname(dest_path))
 
     with open(dest_path, 'wb') as output_pdf:
         writer.write(output_pdf)
@@ -181,7 +185,11 @@ def ocr(file_path, page, progress, page_no, num_pages):
     app.logger.debug(f"准备OCR({page_no}/{num_pages}页):{dest_path}")
     progress += 20 * (page_no / num_pages)
     info_progress(progress, f"正在用OCR提取文本({page_no}/{num_pages}页)...")
-    text = pdf_ocr(dest_path)
+
+    if structure:
+        text = pdf_structure(dest_path)
+    else:
+        text = pdf_ocr(dest_path)
 
     return text, progress
 
@@ -189,7 +197,6 @@ def ocr(file_path, page, progress, page_no, num_pages):
 @app.route('/uploaded', methods=['GET'])
 def uploaded_file():
     filename = request.args.get('filepath')
-    app.logger.debug(f"Get: {filename}")
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 
