@@ -12,7 +12,8 @@ from opencc import OpenCC
 
 load_dotenv(override=True)
 client = OpenAI()
-keywords = ["packing list", "packing slip", "装箱单", "attached-sheet", "WEIGHT MEMO", "清单明细", '清單明', "装箱明细"]
+keywords = ["packing list", "packing slip", "装箱单", "waybill", "way bill",
+            "attached-sheet", "WEIGHT MEMO", "清单明细", '清單明', "装箱明细"]
 
 cc = OpenCC('s2t')  # s2t 表示从简体到繁体
 # 对列表中的每个简体中文词汇进行转换，并添加到原列表中
@@ -27,16 +28,17 @@ for word in list(keywords):  # 使用 list(keywords) 创建原列表的副本以
 print(keywords)
 
 template = """
-根据用户给出的内容，提取特定信息并以JSON格式返回。执行以下步骤：
-1. 如果文档是发票且包含如 'page 1 of 3' 的多页信息，但缺少 "total"、"Amount"、"总金额" 等关键词，返回错误代码和相关页数（例如：{"err": "E0002", "msg": /*第几页*/}）。
-
-2. 提取并记录以下信息：
+根据用户给出的内容，识别出文档类型，提取特定信息并以JSON格式返回。执行以下步骤：
+1.  提取并记录以下信息：
+   - 文档类型（Doc Type）: 只有Invoice、Sale List 或其他
    - 发票编号（Invoice No.）
    - 发票日期（Invoice Date）
    - 币种（Currency）
    - 总金额（Amount）
    - 收票方（Bill To）
    - 开票方（From）
+   
+2. 如果文档是发票且包含如 'page 1 of 3' 的多页信息，但缺少 "total"、"Amount"、"总金额" 等关键词，将Doc Type设为：销货清单
 
 注意：
    - 确保英文信息中的单词间有正确的空格。
@@ -44,8 +46,9 @@ template = """
    - 币种（Currency）应明确标出，例如 'USD'。
    - 如果缺少 "Bill To" 信息，可以查找 'MESSRS'。避免提取包含 'LOGISTICS' 或类似关键词的运输信息（Ship To）。
    - "From" 信息，如果没有直接信息，可以查找 'Account Name' 或 'Beneficiary Name'，如果都没有，提取发票标题中的公司名称。
-   - 如果 "Bill To" 或 "From" 包含中英文信息，只提取英文部分，排除地址信息。
    - 检查 "Bill To" 或 "From" ，如果有地址信息，删除它
+
+3. 
 仅输出JSON结果，不包含其他文字。
 """
 
@@ -70,10 +73,13 @@ def switch_channel(new_channel):
 
 def extract_invoice(text, text_id=""):
     if contains_keywords(text):
-        return json.dumps({"err": "E0001", "msg": "非发票文档"})
+        return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他",
+          "Invoice No.": "", "Invoice Date": "", "Currency": "", "Amount": None,
+          "Bill To": "", "From": ""})
 
     if channel == Channel.MOCK:
         return """ {
+        "Doc Type": "Invoice",
           "Invoice No.": "4510044687",
           "Invoice Date": "2023/08/04",
           "Currency": "USD",

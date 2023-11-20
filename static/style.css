@@ -24,6 +24,7 @@
   flex-direction: column;
   justify-content: space-between; /* 平均分配空间 */
   height: 100%;
+  width: 30% /* 撑满父级容器的宽度 */
 }
 
 #table-container {
