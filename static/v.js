@@ -234,14 +234,15 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function upload_files(elem) {
-    // 检查是否选择了文件
-    if (elem.files.length <= 0)
-      return
+    const files = Array.from(elem.files);
+    const filteredFiles = files.filter(file => file.name.endsWith('.pdf'));
+    if (filteredFiles.length < 1) {
+        alert('请选择包含PDF文件的文件');
+        return
+    }
 
-    // 保存到全局变量中
-    addFiles(elem.files);
-
-    upload_one_file(elem.files[0]);
+    addFiles(filteredFiles);
+    upload_one_file(filteredFiles[0]);
   }
 
   document.getElementById('file-upload').addEventListener('change', function () {

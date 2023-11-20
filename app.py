@@ -128,7 +128,7 @@ def process_data_and_emit_progress(filename):
     with open(file_path, 'rb') as file:
         progress = 0
 
-        app.logger.debug(f"正在读取{filename}...")
+        app.logger.debug(f"正在读取：{filename}...")
         reader = PdfReader(file)
         num_pages = len(reader.pages)
 
