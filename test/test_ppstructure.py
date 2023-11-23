@@ -1,8 +1,26 @@
 import os
 from docx import Document
+from paddleocr import PPStructure,draw_structure_result,save_structure_res
+from pdf2docx.converter import Converter
+import pdf2docx
+import fitz
+
+path = "../uploads/Trend-tek Corporation Limited/TREND TEK INV23-7-11-1.pdf"
+# path = "/Users/qinqiang02/workspace/python/OverseasInvoiceHelper/uploads/tmp/WT/WT单据6_1.pdf"
+path = "/Users/qinqiang02/workspace/python/OverseasInvoiceHelper/uploads/WT TECHNOLOGY PTE. LTD/WT 91985260.pdf"
 
 
-path = "../uploads/tmp/博龙/IV230005_1.pdf"
+def test_pdf2docx(path):
+    cv = Converter(path)
+    cv.convert(ignore_page_error=False)
+    cv.close()
+
+test_pdf2docx(path)
+
+def test_fitz(filename):
+    doc = fitz.open(filename)
+    page = doc.load_page(0)
+    print(page.get_text("text"))
 
 
 def pdf_structure(path):
@@ -63,12 +81,13 @@ def convert_docx_to_markdown(file_path):
 
 
 # 示例使用
-test_path = "../uploads/tmp/晨泰/INV230823-1_1.docx"
+# test_path = "../uploads/tmp/晨泰/INV230823-1_1.docx"
 det_folder = os.path.split(path)[0]
 det_file = os.path.basename(path).split('.')[0] + '.docx'
 det_path = f"{det_folder}/{det_file}"
-new_text = convert_docx_to_html(det_path)
-print(new_text)
+# new_text1 = convert_docx_to_html("../uploads/Trend-tek Corporation Limited/TREND TEK INV23-7-11-1.docx")
+# new_text = convert_docx_to_markdown(det_path)
+# print(new_text)
 
 # with open(det_path, "rb") as docx_file:
 #     result = mammoth.extract_raw_text(docx_file)

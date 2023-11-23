@@ -250,13 +250,6 @@ document.addEventListener('DOMContentLoaded', function () {
     upload_one_file(filteredFiles[0]);
   }
 
-  document.getElementById('file-upload').addEventListener('change', function () {
-    upload_files(this)
-  });
-  document.getElementById('second-file-upload').addEventListener('change', function () {
-    upload_files(this)
-  });
-
   var isDragging = false;
   var leftPanel = document.getElementById('pdf-viewer');
   var rightPanel = document.getElementById('json-viewer');
@@ -284,8 +277,24 @@ document.addEventListener('DOMContentLoaded', function () {
     isDragging = false;
   });
 
+  document.getElementById('file-upload').addEventListener('change', function () {
+    upload_files(this)
+  });
+  
+  document.getElementById('single-file-upload').addEventListener('change', function () {
+    upload_files(this)
+  });
+
+  document.getElementById('second-file-upload').addEventListener('change', function () {
+    upload_files(this)
+  });
+
   document.getElementById('upload-btn').addEventListener('click', function () {
     document.getElementById('file-upload').click();
+  });
+
+  document.getElementById('single-upload-btn').addEventListener('click', function () {
+    document.getElementById('single-file-upload').click();
   });
 
   document.getElementById('second-upload-btn').addEventListener('click', function () {

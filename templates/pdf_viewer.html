@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>PDF 预览</title>
+    <title>海外形式发票识别Demo</title>
     <link rel="stylesheet" type="text/css" href="static/style.css">
 </head>
 
@@ -13,6 +13,10 @@
             <form id="upload-form" enctype="multipart/form-data" style="text-align: center; margin-top: 20px;">
                 <input type="file" name="file" id="file-upload" webkitdirectory directory multiple style="display: none;">
                 <button type="button" id="upload-btn" class="btn">打开文件夹</button>
+
+                <input type="file" name="file" id="single-file-upload"  style="display: none;">
+                <button type="button" id="single-upload-btn" class="btn">单个文件</button>
+
             </form>
             <div>
             </div>

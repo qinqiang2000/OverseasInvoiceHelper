@@ -3,7 +3,7 @@ import logging
 
 from flask import Flask, request, render_template, send_from_directory, jsonify
 from flask_socketio import SocketIO
-from PyPDF2 import PdfReader, PdfWriter
+import fitz
 import os
 
 from data import ExcelHandler
@@ -128,18 +128,17 @@ def process_data_and_emit_progress(filename):
         progress = 0
 
         app.logger.debug(f"正在读取：{filename}...")
-        reader = PdfReader(file)
-        num_pages = len(reader.pages)
+        doc = fitz.open(file)
+        num_pages = len(doc)
 
         for page_no in range(1, num_pages + 1):
-            page = reader.pages[page_no - 1]
-            text = page.extract_text()
+            page = doc.load_page(page_no - 1)
+            text = page.get_text("text")
 
             if not text or len(text) < 30:  # 扫描件
-                text, progress = ocr(filename, page, progress, page_no, num_pages)
-            else: # 标准pdf也用百度的ppstructure来搞
-                text, progress = ocr(filename, page, progress, page_no, num_pages, structure=True)
-
+                text, progress = ocr(filename, doc, progress, page_no, num_pages)
+            else:  # 标准pdf
+                _, progress = ocr(filename, doc, progress, page_no, num_pages, structure=True)
 
             progress += 50 * (page_no / num_pages)
             info_progress(progress, f"提取发票要素({page_no}/{num_pages}页)...")
@@ -168,10 +167,13 @@ def process_data_and_emit_progress(filename):
     info_progress(100, 'done')
 
 
-# ocr. 先写到一个pdf，在读（待优化）
-def ocr(file_path, page, progress, page_no, num_pages, structure=False):
-    writer = PdfWriter()
-    writer.add_page(page)
+# todo: ocr. 先写到一个pdf，在读（连同structure的处理，都是待优化）
+def ocr(file_path, doc, progress, page_no, num_pages, structure=False):
+    progress += 20 * (page_no / num_pages)
+    info_progress(progress, f"正在用OCR提取文本({page_no}/{num_pages}页)...")
+
+    if structure:
+        return "", progress
 
     file_base, file_extension = os.path.splitext(file_path)
     dest_filename = f"{file_base}_{page_no}{file_extension}"
@@ -179,17 +181,13 @@ def ocr(file_path, page, progress, page_no, num_pages, structure=False):
     if not os.path.exists(os.path.dirname(dest_path)):
         os.makedirs(os.path.dirname(dest_path))
 
-    with open(dest_path, 'wb') as output_pdf:
-        writer.write(output_pdf)
+    new_doc = fitz.open()
+    new_doc.insert_pdf(doc, from_page=page_no-1, to_page=page_no-1)
+    new_doc.save(dest_path)
+    new_doc.close()
 
     app.logger.debug(f"准备OCR({page_no}/{num_pages}页):{dest_path}")
-    progress += 20 * (page_no / num_pages)
-    info_progress(progress, f"正在用OCR提取文本({page_no}/{num_pages}页)...")
-
-    if structure:
-        text = pdf_structure(dest_path)
-    else:
-        text = pdf_ocr(dest_path)
+    text = pdf_ocr(dest_path)
 
     return text, progress
 
@@ -215,3 +213,4 @@ def info_data(data, page):
 
 if __name__ == '__main__':
     socketio.run(app, allow_unsafe_werkzeug=True, port=8000)
+    # process_data_and_emit_progress('II-VI Laser Enterprise GmbH/II-VI SKR230627.pdf')

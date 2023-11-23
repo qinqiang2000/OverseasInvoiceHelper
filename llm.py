@@ -9,47 +9,62 @@ from dotenv import load_dotenv
 from enum import Enum
 from opencc import OpenCC
 
-
 load_dotenv(override=True)
 client = OpenAI()
-keywords = ["packing list", "packing slip", "装箱单", "waybill", "way bill",
-            "attached-sheet", "WEIGHT MEMO", "清单明细", '清單明', "装箱明细"]
+packing_keywords = ["packing list", "packing slip", "装箱单",
+                    "attached-sheet", "WEIGHT MEMO", "清单明细", '清單明', "装箱明细", "装箱", "CONTENT LIST"]
+express_keywords = ["waybill", "way bill", "express worldwide", "Delivery Note", "Delivery No", "收单"]
+logistics_keywords = ["LOGISTICS", "物流", "快递"]
+invoice_keywords = ["COMMERCIAL INVOICE", "Invoice Date", "Invoice No", "Invoice Number"]
 
-cc = OpenCC('s2t')  # s2t 表示从简体到繁体
-# 对列表中的每个简体中文词汇进行转换，并添加到原列表中
-for word in list(keywords):  # 使用 list(keywords) 创建原列表的副本以进行迭代
-    try:
-        traditional_word = cc.convert(word)
-        if traditional_word != word:  # 只有当转换后的词与原词不同时才添加
-            keywords.append(traditional_word)
-    except Exception as e:
-        print(f"转换时出错: {e}")
 
-print(keywords)
+def init_keywords(keywords_list):
+    for keywords in keywords_list:
+        cc = OpenCC('s2t')  # s2t 表示从简体到繁体
+        # 对列表中的每个简体中文词汇进行转换，并添加到原列表中
+        for word in list(keywords):  # 使用 list(keywords) 创建原列表的副本以进行迭代
+            try:
+                traditional_word = cc.convert(word)
+                if traditional_word != word:  # 只有当转换后的词与原词不同时才添加
+                    keywords.append(traditional_word)
+            except Exception as e:
+                print(f"转换时出错: {e}")
+
+        # 对keywords里面的空格用'_'替换后，加入到keywords中
+        for word in list(keywords):
+            if ' ' in word:
+                keywords.append(word.replace(' ', '_'))
+        print(keywords)
+
+
+init_keywords([packing_keywords, express_keywords, logistics_keywords, invoice_keywords])
 
 template = """
 根据用户给出的内容，识别出文档类型，提取特定信息并以JSON格式返回。执行以下步骤：
 1.  提取并记录以下信息：
-   - 文档类型（Doc Type）: 只有Invoice、Sale List 或其他
+   - 文档类型（Doc Type） 只有Invoice或其他
    - 发票编号（Invoice No.）
    - 发票日期（Invoice Date）
    - 币种（Currency）
    - 总金额（Amount）
    - 收票方（Bill To）
    - 开票方（From）
-   
-2. 如果文档是发票且包含如 'page 1 of 3' 的多页信息，但缺少 "total"、"Amount"、"总金额" 等关键词，将Doc Type设为：销货清单
+   - Ship To
 
 注意：
-   - 确保英文信息中的单词间有正确的空格。
-   - "Amount" 应以数字类型提取，如果没有"Amount"，则查找 "Total Amount"。
+   - 确保英文信息中的单词间有正确的空格
+   - 如果找不到对应信息，则json的值置为空
+   - "Invoice No." 如果没有"Invoice No."，则查找 "Invoice Number"。
+   - "Amount" 应以数字类型提取，如果没有"Amount"，则查找 "Total Amount"或者"Total Value"。
    - 币种（Currency）应明确标出，例如 'USD'。
-   - 如果缺少 "Bill To" 信息，可以查找 'MESSRS'。避免提取包含 'LOGISTICS' 或类似关键词的运输信息（Ship To）。
+   - 如果缺少 "Bill To" 信息，可以查找 'MESSRS'
+   - 如果"Bill To"提取到包含 'LOGISTICS' 或类似的物流公司信息，将""Bill To"和"Ship To"的值调换
    - "From" 信息，如果没有直接信息，可以查找 'Account Name' 或 'Beneficiary Name'，如果都没有，提取发票标题中的公司名称。
    - 检查 "Bill To" 或 "From" ，如果有地址信息，删除它
+   - 检查 "Bill To" 或 "From" ，如果没正确分词，对他们进行分词
 
-3. 
-仅输出JSON结果，不包含其他文字。
+2. 如果文档是发票且包含如 'page 1 of 3' 的多页信息，增加一个page的字段，值为：第几页/页数
+3. 仅输出JSON结果，不包含其他文字。
 """
 
 
@@ -60,7 +75,7 @@ class Channel(Enum):
     GPT35 = 4
 
 
-channel = Channel.RPA
+channel = Channel.GPT4
 rpa_server_url = 'http://127.0.0.1:9999/api/'
 sem_rpa = threading.Semaphore(0)
 rpa_result = {}
@@ -71,12 +86,56 @@ def switch_channel(new_channel):
     channel = Channel(new_channel)
 
 
-def extract_invoice(text, text_id=""):
-    if contains_keywords(text):
-        return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他",
-          "Invoice No.": "", "Invoice Date": "", "Currency": "", "Amount": None,
-          "Bill To": "", "From": ""})
+def post_process(result):
+    ret = json.loads(result)
 
+    # 删除多余的字段：Ship To
+    ship_to = ret.get("Ship To")
+    bill_to = ret.get("Bill To")
+    # 如果ship包含物流关键词，则删除
+    if bill_to and contain_keywords(bill_to, logistics_keywords) and ship_to:
+        print(f"bill to 包含物流关键词：{bill_to}, 和{ship_to}替换")
+        ret["Ship To"] = bill_to
+        ret["Bill To"] = ship_to
+
+    if "Ship To" in ret:
+        ret.pop("Ship To")
+
+    return json.dumps(ret)
+
+
+def pre_process(text):
+    # 如果是packing list的，则直接返回
+    if contain_keywords(text, packing_keywords):
+        return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他",
+                           "Invoice No.": "", "Invoice Date": "", "Currency": "", "Amount": None,
+                           "Bill To": "", "From": ""})
+
+    # 如果是waybill或express的，则再检查一次不是发票，才返回
+    if contain_keywords(text, express_keywords):
+        if not contain_keywords(text, invoice_keywords):
+            return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他",
+                               "Invoice No.": "", "Invoice Date": "", "Currency": "", "Amount": None,
+                               "Bill To": "", "From": ""})
+
+    return None
+
+
+# 入口，包括事前、事中、事后处理
+def extract_invoice(text, text_id=""):
+    # 事前
+    ret = pre_process(text)
+    if ret:
+        return ret
+
+    # 事中
+    ret = extract(text, text_id)
+
+    # 事后
+    return post_process(ret)
+
+
+def extract(text, text_id=""):
     if channel == Channel.MOCK:
         return """ {
         "Doc Type": "Invoice",
@@ -111,14 +170,12 @@ def extract_invoice(text, text_id=""):
     return response.choices[0].message.content
 
 
-def contains_keywords(text):
-    global keywords
+def contain_keywords(text, excludes):
     # 将关键词列表转换为正则表达式
     # 使用 \s* 来匹配关键词中可能存在的空格或换行符
-    keywords_pattern = '|'.join([keyword.replace(" ", r"\s*") for keyword in keywords])
+    keywords_pattern = '|'.join([keyword.replace(" ", r"\s*") for keyword in excludes])
     pattern = re.compile(keywords_pattern, re.IGNORECASE)
 
-    # 检查文本中是否包含关键词
     return bool(pattern.search(text))
 
 
@@ -166,10 +223,9 @@ def send_get_request(reqid):
         # print('No data yet.')
         return False
 
-
 # text_to_check = """
 # """
-# if contains_keywords(text_to_check):
+# if should_exclude(text_to_check):
 #     print("文本包含关键词")
 # else:
 #     print("文本不包含关键词")

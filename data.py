@@ -44,6 +44,8 @@ class ExcelHandler:
             row_index = match.index[0]
             current_down = match.at[row_index, 'down']
             if key not in current_down:
+                if current_down == '[]':
+                    current_down = []
                 current_down.append(key)
             self.df.at[row_index, 'down'] = current_down
             self.df.at[row_index, 'anno'] = anno
