@@ -17,7 +17,7 @@ packing_keywords = {"packing list", "packing slip", "Shipment Packlist", "装箱
 express_keywords = {"waybill", "way bill", "express world", "Delivery Note", "Delivery No", "收单",
                     "Certificate of Compliance", "FedEx.", "FedEx。"}
 logistics_keywords = {"LOGISTICS", "物流", "快递"}
-invoice_keywords = {"COMMERCIAL INVOICE", "Invoice Date", "Invoice No", "Invoice Number"}
+invoice_keywords = {"COMMERCIAL INVOICE", "Invoice Date", "INV.DATE", "Invoice No", "INV.NO", "Invoice Number"}
 invoice_packing_keywords1 = {"INVOICE & PACKING"}
 invoice_packing_keywords2 = {"Amount"}
 
@@ -74,7 +74,7 @@ template = """
    - 如果没有"Bill To"，则找'MESSRS'、'Purchaser' 或和发票购方相关词语；大小写不敏感
    - 如果"Bill To"提取到包含 'LOGISTICS' 或类似的物流公司信息，将""Bill To"和"Ship To"的值调换
    - 检查 "Bill To" 或 "From" ，如果有地址信息，删除它们
-   - 检查 "Bill To" 或 "From" ，如果没正确分词，对他们进行分词
+   - 检查 "Bill To" 或 "From" ，如果没正确分词，对他们进行分词; 如果是中文，直接提取，不要翻译
     - OCR的内容可能存在名词被切断、个别字母识别错误、对应错位等问题，你需要结合上下文语义进行综合判断，以抽取准确的关键信息。比如“Packing List”被识别成" Packihg
 List"
 2. 如果文档是发票且包含如 'page 1 of 3' 的多页信息，增加一个page的字段，值为：第几页/页数
