@@ -10,7 +10,8 @@
 
 # 忽略目标目录  
 target/  
-  
+uploads/
+
 # 忽略Python编译文件  
 *.pyc  
   

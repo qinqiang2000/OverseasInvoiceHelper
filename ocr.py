@@ -8,7 +8,6 @@ import mammoth
 import subprocess
 import fitz
 import logging
-
 from paddleocr.ppstructure.recovery.recovery_to_doc import sorted_layout_boxes
 from pdf2image import convert_from_path
 
@@ -16,13 +15,14 @@ logging.basicConfig(format='[%(asctime)s %(filename)s:%(lineno)d] %(levelname)s:
 
 angle_cls_url = 'https://api-sit.piaozone.com/nlp_service/match/file'
 
-USING_STRUCTURE = False
+USE_STRUCTURE = os.environ.get("USE_STRUCTURE") == "True"
+USE_GPU = os.environ.get("USE_GPU") == "True"
 
 # 初始化一个OCR或structure识别器,todo: 这里为省去启动时间，后续考虑并发
-if USING_STRUCTURE:
+if USE_STRUCTURE:
     pp_structure = PPStructure(show_log=True)
 else:
-    paddle_ocr = PaddleOCR(use_angle_cls=True, use_gpu=False, cpu_threads=8)
+    paddle_ocr = PaddleOCR(use_angle_cls=True, use_gpu=USE_GPU, cpu_threads=8)
 
 
 # 使pdf图片摆正
@@ -105,7 +105,7 @@ def ocr(file_path, filename, doc, page_no):
     # 预处理
     dest_path = before_ocr(file_path, filename, doc, page_no)
 
-    if USING_STRUCTURE:  # structure方式解析，但目前效果一般
+    if USE_STRUCTURE:  # structure方式解析，但目前效果一般
         text = pdf_structure(dest_path)
     else:
         text = pdf_ocr(dest_path)

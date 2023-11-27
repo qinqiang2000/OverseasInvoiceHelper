@@ -12,9 +12,9 @@ from opencc import OpenCC
 
 load_dotenv(override=True)
 client = OpenAI()
-packing_keywords = {"packing list", "packing slip", "Shipment Packlist", "装箱单",
+packing_keywords = {"packing list", "packing slip", "Shipment Packlist", "装箱单", "Delivery Order", "送货单",
                     "attached-sheet", "WEIGHT MEMO", "清单明细", '清單明', "装箱明细", "装箱", "CONTENT LIST"}
-express_keywords = {"waybill", "way bill", "express worldwide", "Delivery Note", "Delivery No", "收单",
+express_keywords = {"waybill", "way bill", "express world", "Delivery Note", "Delivery No", "收单",
                     "Certificate of Compliance", "FedEx.", "FedEx。"}
 logistics_keywords = {"LOGISTICS", "物流", "快递"}
 invoice_keywords = {"COMMERCIAL INVOICE", "Invoice Date", "Invoice No", "Invoice Number"}
@@ -64,6 +64,7 @@ template = """
 
 注意：
    - 确保英文信息中的单词间有正确的空格
+   - 确保日期信息有正确的格式
    - 如果找不到对应信息，则json的值置为空
    - "Invoice No." 如果没有"Invoice No."，则查找 "Invoice Number"。
    - "Amount" 以数字类型提取，只提取，不相加；
