@@ -14,8 +14,8 @@
                 <input type="file" name="file" id="file-upload" webkitdirectory directory multiple style="display: none;">
                 <button type="button" id="upload-btn" class="btn">打开文件夹</button>
 
-                <input type="file" name="file" id="single-file-upload"  style="display: none;">
-                <button type="button" id="single-upload-btn" class="btn">单个文件</button>
+                <input type="file" name="file" id="single-file-upload"  multiple style="display: none;">
+                <button type="button" id="single-upload-btn" class="btn">打开文件</button>
 
             </form>
             <div>
@@ -24,7 +24,7 @@
         <div id="gutter" class="gutter"></div>
         <div id="json-viewer" class="panel" style="display: none;">
             <!-- 进度条容器 -->
-            <div id="progress-container-wrapper">
+            <div id="progress-container-wrapper" style="position: sticky; top: 2px;">
                 <div id="progress-container" style="width: 100%; background-color: #ddd;">
                     <div id="progressBar" style="width: 0%; height: 20px; background-color: #4CAF50;"></div>
                 </div>

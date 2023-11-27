@@ -46,6 +46,11 @@
   /* 其他样式 */
 }
 
+#progress-status {
+  mix-blend-mode: difference;
+  color: rgb(1, 1, 1); /* 默认颜色，将在深色背景上显示为黑色 */
+}
+
 #second-upload-form {
   display: flex;
   flex-direction: row; /* 确保子元素水平排列 */

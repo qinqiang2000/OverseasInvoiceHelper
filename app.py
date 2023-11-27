@@ -7,8 +7,9 @@ import fitz
 import os
 
 from data import ExcelHandler
+from doc import extract_text
 from llm import extract_invoice
-from ocr import pdf_ocr, pdf_structure
+from ocr import ocr
 import llm
 
 app = Flask(__name__)
@@ -28,6 +29,21 @@ excel_handler = ExcelHandler('data.xlsx')
 llm_result = {}
 ocr_result = {}
 anno_result = {}
+# a: PyMuPDF(fitz) b: pdfplumber c: pdfminer d: camelot e: tabula
+pdf_parser = "b"
+
+class Progress:
+    def __init__(self, num_pages=1):
+        self.page = 1
+        self.num_pages = num_pages
+
+    def set_page(self, page):
+        self.page = page
+
+    def set_progress(self, progress, msg, ):
+        msg = msg + f"(Page {self.page}/{self.num_pages})"
+        app.logger.info(f"progress: {progress}, msg: {msg}")
+        socketio.emit('progress', {'progress': progress, 'status': msg})
 
 
 @app.route('/')
@@ -64,20 +80,28 @@ def handle_icon_click():
 
     return jsonify({'status': 'success'})
 
-
+# 切换llm通道和pdf解析方法，方便平时测试
 @app.route('/switch_channel', methods=['POST'])
 def switch_channel():
     data = request.json
-    channel = int(data['channel'])
-    app.logger.debug(f"switch_channel: {channel}")
 
-    values = tuple(item.value for item in llm.Channel)
-    if channel not in values:
-        return jsonify({'status': 'fail', 'msg': f'频道 {channel} 切换失败'})
+    # 如果channel是数字，说明是切换llm通道
+    if data['channel'].isdigit():
+        channel = int(data['channel'])
+        values = tuple(item.value for item in llm.Channel)
+        if channel not in values:
+            return jsonify({'status': 'fail', 'msg': f'频道 {channel} 切换失败'})
 
-    llm.switch_channel(channel)
-    app.logger.info(f"切换到频道 {llm.Channel(channel)}")
-    return jsonify({'status': 'success', 'msg': f'频道 {llm.Channel(channel)} 切换成功'})
+        llm.switch_channel(channel)
+        app.logger.info(f"切换到频道 {llm.Channel(channel)}")
+        return jsonify({'status': 'success', 'msg': f'频道 {llm.Channel(channel)} 切换成功'})
+    # 如果channel不是数字，说明是切换pdf解析方法
+    else:
+        global pdf_parser
+        pdf_parser = data['channel']
+        app.logger.info(f"切换到pdf解析方法 {pdf_parser}")
+        return jsonify({'status': 'success', 'msg': f'切换到pdf解析方法[ {pdf_parser}] 切换成功'})
+
 
 
 @app.route('/text', methods=['POST'])
@@ -122,26 +146,28 @@ def upload_file():
 # 1）提取文本
 # 2）ocr（如果是图片）
 # 3）提取发票要素
+# todo：将这个函数拆分成多个函数，放到独立的document_loader模块
 def process_data_and_emit_progress(filename):
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     with open(file_path, 'rb') as file:
-        progress = 0
-
         app.logger.debug(f"正在读取：{filename}...")
         doc = fitz.open(file)
         num_pages = len(doc)
+        pg = Progress(num_pages)
 
         for page_no in range(1, num_pages + 1):
-            page = doc.load_page(page_no - 1)
+            pg.set_page(page_no)
+
+            page = doc.load_page(page_no-1)
             text = page.get_text("text")
 
-            if not text or len(text) < 30:  # 扫描件
-                text, progress = ocr(filename, doc, progress, page_no, num_pages)
-            else:  # 标准pdf
-                _, progress = ocr(filename, doc, progress, page_no, num_pages, structure=True)
+            if not text or len(text) < 39:  # 扫描件，39是一个经验值
+                pg.set_progress(20, "正在OCR...")
+                text = ocr(app.config['UPLOAD_FOLDER'], filename, doc, page_no)
+            elif pdf_parser != 'a':   # 使用其他ocr引擎做提取text
+                text = extract_text(file_path, page_no-1, pdf_parser)
 
-            progress += 50 * (page_no / num_pages)
-            info_progress(progress, f"提取发票要素({page_no}/{num_pages}页)...")
+            pg.set_progress(60, "正在提取关键信息...")
             ret = extract_invoice(text, filename)
 
             # 将原始text和ret保存到字典llm_result，key为filename+page_no
@@ -163,33 +189,7 @@ def process_data_and_emit_progress(filename):
 
             info_data(ret, page_no)
 
-    app.logger.debug(f"处理完成")
-    info_progress(100, 'done')
-
-
-# todo: ocr. 先写到一个pdf，在读（连同structure的处理，都是待优化）
-def ocr(file_path, doc, progress, page_no, num_pages, structure=False):
-    progress += 20 * (page_no / num_pages)
-    info_progress(progress, f"正在用OCR提取文本({page_no}/{num_pages}页)...")
-
-    if structure:
-        return "", progress
-
-    file_base, file_extension = os.path.splitext(file_path)
-    dest_filename = f"{file_base}_{page_no}{file_extension}"
-    dest_path = os.path.join(app.config['UPLOAD_FOLDER'], 'tmp', dest_filename)
-    if not os.path.exists(os.path.dirname(dest_path)):
-        os.makedirs(os.path.dirname(dest_path))
-
-    new_doc = fitz.open()
-    new_doc.insert_pdf(doc, from_page=page_no-1, to_page=page_no-1)
-    new_doc.save(dest_path)
-    new_doc.close()
-
-    app.logger.debug(f"准备OCR({page_no}/{num_pages}页):{dest_path}")
-    text = pdf_ocr(dest_path)
-
-    return text, progress
+    pg.set_progress(100, "done")
 
 
 @app.route('/uploaded', methods=['GET'])
@@ -200,10 +200,6 @@ def uploaded_file():
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'pdf'
-
-
-def info_progress(progress, msg):
-    socketio.emit('progress', {'progress': progress, 'status': msg})
 
 
 def info_data(data, page):

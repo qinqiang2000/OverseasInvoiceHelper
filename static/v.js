@@ -45,8 +45,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (data.status)
       document.getElementById('progress-status').textContent = data.status;
 
-    // 当进度完成时,隐藏进度条
-    if (data.status == "done") {
+    // 当data.status包含‘done’时，隐藏进度条
+    if (data.status.includes('done')) {
       log('Progress: done');
       document.getElementById('progress-container-wrapper').style.display = 'none';
       document.getElementById('progress-status').style.display = 'none';
@@ -181,7 +181,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (response.status === 'success') {
           var newWindow = window.open('', '_blank');
           newWindow.document.write('<html><head><title>数据展示</title><style>p { white-space: pre-wrap; }</style></head><body>');
-          newWindow.document.write('<h1>数据</h1>');
           newWindow.document.write('<p>' + response.text + '</p>'); // 假设 responseData 是您通过 AJAX 获取的数据
           newWindow.document.write('</body></html>');
           newWindow.document.close();
