@@ -106,12 +106,12 @@ def before_extract(text):
     # 如果是packing list的，则直接返回
     if contain_keywords(first_half, packing_keywords):
         if not contain_keywords(first_half, invoice_packing_keywords1) and not contain_keywords(second_half, invoice_packing_keywords2):
-            return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他"})
+            return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他"}, ensure_ascii=False, indent=4)
 
     # 如果是waybill或express的，则再检查一次不是发票，才返回
     if contain_keywords(text, express_keywords):
         if not contain_keywords(text, invoice_keywords):
-            return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他"})
+            return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他"}, ensure_ascii=False, indent=4)
 
     return None
 
@@ -132,7 +132,7 @@ def after_extract(result):
     if "Ship To" in ret:
         ret.pop("Ship To")
 
-    return json.dumps(ret)
+    return json.dumps(ret, ensure_ascii=False, indent=4)
 
 
 def get_half(text):

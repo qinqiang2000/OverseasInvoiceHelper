@@ -7,10 +7,13 @@ import fitz
 import os
 
 from data import ExcelHandler
-from doc import extract_text
+import doc_utils
 from llm import extract_invoice
 from ocr import ocr
 import llm
+
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
@@ -157,18 +160,28 @@ def process_data_and_emit_progress(filename):
 
         for page_no in range(1, num_pages + 1):
             pg.set_page(page_no)
-
             page = doc.load_page(page_no-1)
+
+            unknown_font = False
+            for font in page.get_fonts():
+                if not doc_utils.known_fonts(font[2]):
+                    app.logger.warning(f"=========unknown font=========: {font[2]}")
+                    unknown_font = True
+                    break
+
             text = page.get_text("text")
 
-            if not text or len(text) < 39:  # 扫描件，39是一个经验值
+            if not text or len(text) < 39 or unknown_font:  # 扫描件，39是一个经验值
                 pg.set_progress(20, "正在OCR...")
                 text = ocr(app.config['UPLOAD_FOLDER'], filename, doc, page_no)
             elif pdf_parser != 'a':   # 使用其他ocr引擎做提取text
-                text = extract_text(file_path, page_no-1, pdf_parser)
+                text = doc_utils.extract_text(file_path, page_no-1, pdf_parser)
 
             pg.set_progress(60, "正在提取关键信息...")
             ret = extract_invoice(text, filename)
+
+            # 完成一次识别任务，给前端发送进度
+            info_data(ret, page_no)
 
             # 将原始text和ret保存到字典llm_result，key为filename+page_no
             ocr_result[f"{filename}_{page_no}"] = text
@@ -186,8 +199,6 @@ def process_data_and_emit_progress(filename):
                 excel_handler.add_row_to_dataframe({'filename': filename, 'page': page_no,
                                                     'result': ret, 'anno': ret, 'down': [], 'raw': text})
             excel_handler.save_dataframe_to_excel()
-
-            info_data(ret, page_no)
 
     pg.set_progress(100, "done")
 
