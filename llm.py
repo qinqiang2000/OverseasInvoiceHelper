@@ -45,11 +45,6 @@ def init_keywords(keywords_list):
             if ' ' in word:
                 keywords.add(word.replace(' ', '_'))
 
-        # 去掉keywords的空格后，加入到keywords中
-        for word in list(keywords):
-            if ' ' in word:
-                keywords.add(word.replace(' ', ''))
-
         print(keywords)
 
 
@@ -82,7 +77,7 @@ template = """
    - 检查 "Bill To" 或 "From" ，如果有地址信息，删除它们
    - 检查 "Bill To" 或 "From" ，如果没正确分词，对他们进行分词; 如果有中文，直接提取，不要翻译
     - OCR的内容可能存在名词被切断、个别字母识别错误、对应错位等问题，你需要结合上下文语义进行综合判断，以抽取准确的关键信息。比如“Packing List”被识别成" Packihg
-List"
+List"或"PACKINGLIST"
 2. 如果文档是发票且包含如 'page 1 of 3' 的多页信息，增加一个page的字段，值为：第几页/页数
 3. 仅输出JSON结果，不包含其他文字。
 """
