@@ -63,8 +63,7 @@ template = """
    - Ship To
 
 注意：
-   - 确保英文信息中的单词间有正确的空格
-   - 确保日期信息有正确的格式
+   - 确保英文信息中的单词间有正确的空
    - 如果找不到对应信息，则json的值置为空
    - "Invoice No." 如果没有"Invoice No."，则查找 "Invoice Number"。
    - "Amount" 以数字类型提取，只提取，不相加；
