@@ -26,7 +26,8 @@ def init_keywords(keywords_list):
     for keywords in keywords_list:
         # 对keywords里面的符号用全角转换后，加入到keywords中
         for word in list(keywords):
-            full_width_keyword = ''.join(chr(0xFEE0 + ord(c)) if 0x21 <= ord(c) <= 0x7E and not c.isalnum() else c for c in word)
+            full_width_keyword = ''.join(
+                chr(0xFEE0 + ord(c)) if 0x21 <= ord(c) <= 0x7E and not c.isalnum() else c for c in word)
             keywords.add(full_width_keyword)
 
         cc = OpenCC('s2t')  # s2t 表示从简体到繁体
@@ -43,6 +44,11 @@ def init_keywords(keywords_list):
         for word in list(keywords):
             if ' ' in word:
                 keywords.add(word.replace(' ', '_'))
+
+        # 去掉keywords的空格后，加入到keywords中
+        for word in list(keywords):
+            if ' ' in word:
+                keywords.add(word.replace(' ', ''))
 
         print(keywords)
 
@@ -105,7 +111,8 @@ def before_extract(text):
     first_half, second_half = get_half(text)
     # 如果是packing list的，则直接返回
     if contain_keywords(first_half, packing_keywords):
-        if not contain_keywords(first_half, invoice_packing_keywords1) and not contain_keywords(second_half, invoice_packing_keywords2):
+        if not contain_keywords(first_half, invoice_packing_keywords1) and not contain_keywords(second_half,
+                                                                                                invoice_packing_keywords2):
             return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他"}, ensure_ascii=False, indent=4)
 
     # 如果是waybill或express的，则再检查一次不是发票，才返回
