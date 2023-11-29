@@ -16,7 +16,7 @@ packing_keywords = {"packing list", "packing slip", "Shipment Packlist", "装箱
                     "attached-sheet", "WEIGHT MEMO", "清单明细", '清單明', "装箱明细", "装箱", "CONTENT LIST"}
 express_keywords = {"waybill", "way bill", "express world", "Delivery Note", "Delivery No", "收单",
                     "Certificate of Compliance", "FedEx.", "FedEx。"}
-logistics_keywords = {"LOGISTICS", "物流", "快递"}
+logistics_keywords = {"LOGISTICS", "物流", "快递", "express world"}
 invoice_keywords = {"COMMERCIAL INVOICE", "Invoice Date", "INV.DATE", "Invoice No", "INV.NO", "Invoice Number"}
 invoice_packing_keywords1 = {"INVOICE & PACKING"}
 invoice_packing_keywords2 = {"Amount"}
@@ -52,34 +52,24 @@ init_keywords([packing_keywords, express_keywords, logistics_keywords, invoice_k
                invoice_packing_keywords1, invoice_packing_keywords2])
 
 template = """
-根据用户给出的OCR后内容，识别出文档类型，提取特定信息并以JSON格式返回。执行以下步骤：
-1.  提取并记录以下信息：
-   - 文档类型（Doc Type） 只有Invoice或其他
-   - 发票编号（Invoice No.）
-   - 发票日期（Invoice Date）
-   - 币种（Currency）
-   - 总金额（Amount）
-   - 收票方（Bill To）
-   - 开票方（From）
-   - Ship To
+1. 根据用户给出的OCR的内容，识别出文档类型，提取并记录以下信息：
+-文档类型（Doc Type）: 只有"Invoice"或其他。
+-发票编号（Invoice No.）: 如果没有"Invoice No."，则查找"Invoice Number"。
+-发票日期（Invoice Date）。
+-币种（Currency）: 应明确标出，例如 'USD'。
+-总金额（Amount）: 以数字类型提取，如果没有"Amount"，则找"Total Amount"或"Total Value"或其他类似的词语，找不到置为0。
+-收票方（Bill To）: 如果没有"Bill To"，则找'MESSRS'、'Purchaser' 、'Customer'或其他和'购买方'同义的词语；大小写不敏感。如果"Bill To" 包含'LOGISTICS'、'Express worldwide' 或类似'物流公司'的信息，将"Bill To"和"Ship To"的值调换。
+-开票方（From）: 如果没有"From" 信息, 或者不像一个公司名称，则找：'Account Name'、'Beneficiary Name'、底部签名处或标题; 大小写不敏感。
+-Ship To
 
 注意：
-   - 确保英文信息中的单词间有正确的空格
-   - 确保日期信息有正确空格
-   - 如果找不到对应信息，则json的值置为空
-   - "Invoice No." 如果没有"Invoice No."，则查找 "Invoice Number"
-   - "Amount" 以数字类型提取，只提取，不相加；
-   - 如没有"Amount"，则找 "Total Amount"或"Total Value"或其他类似的词语，找不到置为0
-   - 币种（Currency）应明确标出，例如 'USD'。
-   - 如果没有"From" 信息,或者不像一个公司名称：则找：'Account Name' 、 'Beneficiary Name'、底部签名处或标题;大小写不敏感
-   - 如果没有"Bill To"，则找'MESSRS'、'Purchaser' 或和发票购方相关词语；大小写不敏感
-   - 如果"Bill To"提取到包含 'LOGISTICS' 或类似的物流公司信息，将""Bill To"和"Ship To"的值调换
-   - 检查 "Bill To" 或 "From" ，如果有地址信息，删除它们
-   - 检查 "Bill To" 或 "From" ，如果没正确分词，对他们进行分词; 如果有中文，直接提取，不要翻译
-    - OCR的内容可能存在名词被切断、个别字母识别错误、对应错位等问题，你需要结合上下文语义进行综合判断，以抽取准确的关键信息。比如“Packing List”被识别成" Packihg
-List"或"PACKINGLIST"
-2. 如果文档是发票且包含如 'page 1 of 3' 的多页信息，增加一个page的字段，值为：第几页/页数
-3. 仅输出JSON结果，不包含其他文字。
+-识别并分割紧凑排列的单词，尤其是公司名称，如“WaterWorldInternationalIndustrialLimited”，正确分词为“Water World International Industrial Limited”。
+-确保日期信息有正确空格。
+-如果找不到对应信息，则json的值置为空。
+-"Bill To" 或 "From" 如果有地址信息，删除它们。
+-"Bill To" 或 "From" 如果没正确分词，对他们进行分词; 如果有中文，直接提取，不要翻译。
+-OCR的内容可能存在名词被切断、个别字母识别错误、对应错位等问题，你需要结合上下文语义进行综合判断，以抽取准确的关键信息。
+-仅输出JSON结果，不包含其他文字。
 """
 
 
@@ -126,7 +116,8 @@ def after_extract(result):
     ship_to = ret.get("Ship To")
     bill_to = ret.get("Bill To")
     # 如果ship包含物流关键词，则删除
-    if bill_to and contain_keywords(bill_to, logistics_keywords) and ship_to:
+    if bill_to and contain_keywords(bill_to, logistics_keywords) \
+            and ship_to and not contain_keywords(ship_to, logistics_keywords) :
         print(f"bill to 包含物流关键词：{bill_to}, 和{ship_to}替换")
         ret["Ship To"] = bill_to
         ret["Bill To"] = ship_to
