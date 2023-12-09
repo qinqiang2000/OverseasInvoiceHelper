@@ -1,11 +1,13 @@
 import mimetypes
+import os
+
 import requests
 import hashlib
 import time
 
 
 app_key = "s60gby076vd6qqgd"
-secret = "10oklmv8us3wiab9osxrbullkcv46pvak1ofsqwr"
+secret = os.environ.get("RUIZHEN_APP_SECRET")
 url = "https://api.regenai.com/v1/general/fetch"
 
 

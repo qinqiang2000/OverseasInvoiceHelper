@@ -1,5 +1,4 @@
 import logging
-import mimetypes
 import os
 
 import fitz
