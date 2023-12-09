@@ -145,24 +145,30 @@ def upload_file():
 def process_data_and_emit_progress(filename):
     # 创建一个进度条
     pg = Progress(filename)
-    pg.set_progress(1, "正在识别和提取第1页...")
 
     # 创建一个队列用于和文档load线程通信
     q = queue.Queue()
     # 异步加载文档
     doc_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     threading.Thread(target=async_load, args=(doc_path, q,)).start()
+    page_no = 0
+    total = None
     while True:
+        if total is None:
+            pg.set_progress(1, f"正在识别第{page_no+1}页...")
+        else:
+            pg.set_progress(int(50*page_no/total), f"正在识别第{page_no+1}页...")
+
         page_no, text, total = q.get()  # 从队列获取进度和结果, page_no 从1开始
         if page_no == -1:
             break
 
         # LLM提取要素
+        pg.set_progress(int(75*page_no/total), f"正在LL提取第{page_no}页...")
         ret = extract_invoice(text, filename)
 
-        # 完成一次识别任务，给前端发送进度
+        # 完成一次任务，给前端发送进度
         info_data(ret, page_no)
-        pg.set_progress(int(page_no / total * 100), f"正在识别和提取第{page_no+1}页...")
 
         # 将原始text和ret保存到字典llm_result，key为filename+page_no
         ocr_result[f"{filename}_{page_no}"] = text

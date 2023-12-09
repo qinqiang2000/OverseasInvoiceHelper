@@ -2,8 +2,7 @@ import os
 import pdfplumber
 from dotenv import load_dotenv
 import logging
-
-from ocr import ocr
+from retrieval.ocr import ocr
 
 logging.basicConfig(format='[%(asctime)s %(filename)s:%(lineno)d] %(levelname)s: %(message)s', level=logging.INFO, force=True)
 load_dotenv(override=True)

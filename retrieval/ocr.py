@@ -1,18 +1,21 @@
 import logging
+import mimetypes
 import os
 
 import fitz
 import requests
 from paddleocr import PaddleOCR
 
+from retrieval.ruizhen_ocr import ruizhen_ocr
+
 logging.basicConfig(format='[%(asctime)s %(filename)s:%(lineno)d] %(levelname)s: %(message)s', level=logging.INFO, force=True)
 
 angle_cls_url = 'https://api-sit.piaozone.com/nlp_service/match/file'
 
-USE_GPU = os.environ.get("PPOCR_USE_GPU") == "True"
 ocr_vendor = os.environ.get("OCR_VENDOR")
+USE_GPU = os.environ.get("PPOCR_USE_GPU") == "True"
 
-# 初始化一个OCR或structure识别器,todo: 这里为省去启动时间，后续考虑并发
+# 初始化一PaddleOCR,todo: 这里为省去启动时间，后续要考虑并发
 if ocr_vendor == 'ppocr':
     paddle_ocr = PaddleOCR(use_angle_cls=True, use_gpu=USE_GPU, cpu_threads=8)
 
@@ -59,7 +62,8 @@ def before_ocr(doc_path, page_no):
     logging.info(f"已保存第{page_no}页到：{dest_path}")
 
     # 使pdf图片摆正
-    up_image(dest_path, new_doc)
+    if ocr_vendor == 'ppocr':
+        up_image(dest_path, new_doc)
 
     new_doc.close()
     return dest_path
@@ -71,12 +75,15 @@ def ocr(doc_path, page_no):
     dest_path = before_ocr(doc_path, page_no)
 
     if ocr_vendor == 'ppocr':
-        text = pdf_ocr(dest_path)
+        text = pp_ocr(dest_path)
+    else:
+        text = ruizhen_ocr(dest_path)
 
+    print(text)
     return text
 
 
-def pdf_ocr(img_path):
+def pp_ocr(img_path):
     global paddle_ocr
     result = paddle_ocr.ocr(img_path)
 

@@ -83,7 +83,7 @@ class Channel(Enum):
     GPT35 = 4
 
 
-channel = Channel.MOCK
+channel = Channel.GPT35
 rpa_server_url = 'http://127.0.0.1:9999/api/'
 sem_rpa = threading.Semaphore(0)
 rpa_result = {}
@@ -115,7 +115,6 @@ def before_extract(text):
 def after_extract(result):
     ret = json.loads(result)
 
-    # 删除多余的字段：Ship To
     ship_to = ret.get("Ship To")
     bill_to = ret.get("Bill To")
     # 如果ship包含物流关键词，则删除
@@ -127,6 +126,14 @@ def after_extract(result):
 
     if "Ship To" in ret:
         ret.pop("Ship To")
+
+    keys = ["Doc Type", "Invoice No.", "Invoice Date", "Currency", "Amount", "Bill To", "From"]
+    keys = [key.lower() for key in keys]
+
+    # 遍历ret，如果有key不在keys中，则删除
+    for key in list(ret.keys()):
+        if key.lower() not in keys:
+            ret.pop(key)
 
     return json.dumps(ret, ensure_ascii=False, indent=4)
 
@@ -167,7 +174,7 @@ def extract(text, text_id=""):
           "Currency": "USD",
           "Amount": 4590.00,
           "Bill To": "HISENSE BROADBAND MULTIMEDIA TECHNOLOGIES (HK) CO., LIMITED",
-          "From": "Hisense Broadband Multimedia Technologies(HK) Co., Limited"
+          "From": "KONG TAK ELECTRONIC CO., LTD."
         }"""
 
     elif channel == Channel.RPA:

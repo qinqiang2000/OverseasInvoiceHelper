@@ -309,6 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 重新上传最后一个已处理的文件
     if (lastProcessedFile) {
+      document.getElementById('progressBar').style.width = '0%';
       upload_one_file(lastProcessedFile.file);
     }
   });
