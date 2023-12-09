@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import threading
+import time
 
 import requests
 from openai import OpenAI
@@ -82,7 +83,7 @@ class Channel(Enum):
     GPT35 = 4
 
 
-channel = Channel.GPT4
+channel = Channel.MOCK
 rpa_server_url = 'http://127.0.0.1:9999/api/'
 sem_rpa = threading.Semaphore(0)
 rpa_result = {}

@@ -1,18 +1,20 @@
 import json
 import logging
-
-from flask import Flask, request, render_template, send_from_directory, jsonify
-from flask_socketio import SocketIO
-import fitz
 import os
 
-from data import ExcelHandler
-import doc_utils
-from llm import extract_invoice
-from ocr import ocr
-import llm
-
 from dotenv import load_dotenv
+from flask import Flask, request, render_template, send_from_directory, jsonify
+from flask_socketio import SocketIO
+
+import llm
+from data import ExcelHandler
+from llm import extract_invoice
+import threading
+import queue
+import time
+from retrieval.doc_loader import async_load
+
+
 load_dotenv(override=True)
 
 app = Flask(__name__)
@@ -35,18 +37,14 @@ anno_result = {}
 # a: PyMuPDF(fitz) b: pdfplumber c: pdfminer d: camelot e: tabula
 pdf_parser = "b"
 
+
 class Progress:
-    def __init__(self, num_pages=1):
-        self.page = 1
-        self.num_pages = num_pages
+    def __init__(self, filename):
+        self.id = filename
 
-    def set_page(self, page):
-        self.page = page
-
-    def set_progress(self, progress, msg, ):
-        msg = msg + f"(Page {self.page}/{self.num_pages})"
+    def set_progress(self, progress, msg):
         app.logger.info(f"progress: {progress}, msg: {msg}")
-        socketio.emit('progress', {'progress': progress, 'status': msg})
+        socketio.emit('progress', {'progress': progress, 'status': msg, 'id': self.id})
 
 
 @app.route('/')
@@ -59,7 +57,7 @@ def index():
 def handle_icon_click():
     data = request.json
     filename = data['filename']
-    page = int(data['page'])
+    page = int(data['page'])  # 从1开始
     key = data['key']
     val = data['value']
     clicked = data['clicked']
@@ -106,7 +104,6 @@ def switch_channel():
         return jsonify({'status': 'success', 'msg': f'切换到pdf解析方法[ {pdf_parser}] 切换成功'})
 
 
-
 @app.route('/text', methods=['POST'])
 def get_raw_test():
     data = request.json
@@ -145,60 +142,44 @@ def upload_file():
         # return render_template('pdf_viewer.html', filename=filename)
 
 
-# 总体处理上传的文件：
-# 1）提取文本
-# 2）ocr（如果是图片）
-# 3）提取发票要素
-# todo：将这个函数拆分成多个函数，放到独立的document_loader模块
 def process_data_and_emit_progress(filename):
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    with open(file_path, 'rb') as file:
-        app.logger.debug(f"正在读取：{filename}...")
-        doc = fitz.open(file)
-        num_pages = len(doc)
-        pg = Progress(num_pages)
+    # 创建一个进度条
+    pg = Progress(filename)
+    pg.set_progress(1, "正在识别和提取第1页...")
 
-        for page_no in range(1, num_pages + 1):
-            pg.set_page(page_no)
-            page = doc.load_page(page_no-1)
+    # 创建一个队列用于和文档load线程通信
+    q = queue.Queue()
+    # 异步加载文档
+    doc_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    threading.Thread(target=async_load, args=(doc_path, q,)).start()
+    while True:
+        page_no, text, total = q.get()  # 从队列获取进度和结果, page_no 从1开始
+        if page_no == -1:
+            break
 
-            unknown_font = False
-            for font in page.get_fonts():
-                if not doc_utils.known_fonts(font[2]):
-                    app.logger.warning(f"=========unknown font=========: {font[2]}")
-                    unknown_font = True
-                    break
+        # LLM提取要素
+        ret = extract_invoice(text, filename)
 
-            text = page.get_text("text")
+        # 完成一次识别任务，给前端发送进度
+        info_data(ret, page_no)
+        pg.set_progress(int(page_no / total * 100), f"正在识别和提取第{page_no+1}页...")
 
-            if not text or len(text) < 39 or unknown_font:  # 扫描件，39是一个经验值
-                pg.set_progress(20, "正在OCR...")
-                text = ocr(app.config['UPLOAD_FOLDER'], filename, doc, page_no)
-            elif pdf_parser != 'a':   # 使用其他ocr引擎做提取text
-                text = doc_utils.extract_text(file_path, page_no-1, pdf_parser)
+        # 将原始text和ret保存到字典llm_result，key为filename+page_no
+        ocr_result[f"{filename}_{page_no}"] = text
+        llm_result[f"{filename}_{page_no}"] = anno_result[f"{filename}_{page_no}"] = ret
 
-            pg.set_progress(60, "正在提取关键信息...")
-            ret = extract_invoice(text, filename)
-
-            # 完成一次识别任务，给前端发送进度
-            info_data(ret, page_no)
-
-            # 将原始text和ret保存到字典llm_result，key为filename+page_no
-            ocr_result[f"{filename}_{page_no}"] = text
-            llm_result[f"{filename}_{page_no}"] = anno_result[f"{filename}_{page_no}"] = ret
-
-            # 持久化
-            match = excel_handler.match(filename, page_no)
-            if not match.empty:
-                row_index = match.index[0]
-                anno_result[f"{filename}_{page}"] = match.at[row_index, 'anno']
-                match.at[row_index, 'result'] = ret
-                match.at[row_index, 'down'] = []
-                match.at[row_index, 'raw'] = text
-            else:
-                excel_handler.add_row_to_dataframe({'filename': filename, 'page': page_no,
-                                                    'result': ret, 'anno': ret, 'down': [], 'raw': text})
-            excel_handler.save_dataframe_to_excel()
+        # 持久化
+        match = excel_handler.match(filename, page_no)
+        if not match.empty:
+            row_index = match.index[0]
+            anno_result[f"{filename}_{page_no}"] = match.at[row_index, 'anno']
+            match.at[row_index, 'result'] = ret
+            match.at[row_index, 'down'] = []
+            match.at[row_index, 'raw'] = text
+        else:
+            excel_handler.add_row_to_dataframe({'filename': filename, 'page': page_no,
+                                                'result': ret, 'anno': ret, 'down': [], 'raw': text})
+        excel_handler.save_dataframe_to_excel()
 
     pg.set_progress(100, "done")
 
@@ -220,4 +201,3 @@ def info_data(data, page):
 
 if __name__ == '__main__':
     socketio.run(app, allow_unsafe_werkzeug=True, port=8000)
-    # process_data_and_emit_progress('II-VI Laser Enterprise GmbH/II-VI SKR230627.pdf')
