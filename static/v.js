@@ -241,9 +241,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function upload_files(elem) {
     const files = Array.from(elem.files);
-    const filteredFiles = files.filter(file => file.name.endsWith('.pdf'));
+    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+    const filteredFiles = files.filter(file => {
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        return allowedExtensions.includes(fileExtension);
+    });
     if (filteredFiles.length < 1) {
-      alert('请选择包含PDF文件的文件');
+      alert("请选择pdf, jpg, jpeg或png文件");
       return
     }
 

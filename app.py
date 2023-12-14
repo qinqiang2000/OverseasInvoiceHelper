@@ -11,7 +11,6 @@ from data import ExcelHandler
 from llm import extract_invoice
 import threading
 import queue
-import time
 from retrieval.doc_loader import async_load
 
 
@@ -197,7 +196,8 @@ def uploaded_file():
 
 
 def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'pdf'
+    ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'pdf'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 def info_data(data, page):

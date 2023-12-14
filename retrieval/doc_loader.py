@@ -2,7 +2,7 @@ import os
 import pdfplumber
 from dotenv import load_dotenv
 import logging
-from retrieval.ocr import ocr
+from retrieval.ocr import ocr, ocr_img
 
 logging.basicConfig(format='[%(asctime)s %(filename)s:%(lineno)d] %(levelname)s: %(message)s', level=logging.INFO, force=True)
 load_dotenv(override=True)
@@ -10,6 +10,13 @@ fonts_list = os.getenv("KNOWN_FONTS").split(',')
 
 
 def async_load(doc_path, queue):
+    # 非pdf文件，直接ocr
+    if not doc_path.lower().endswith(".pdf"):
+        logging.info(f"=========put to queue: {doc_path}==========")
+        queue.put((1, ocr_img(doc_path), 1))
+        queue.put((-1, None, -1))
+        return
+
     pdf = pdfplumber.open(doc_path)
     num_pages = len(pdf.pages)
     for page in pdf.pages:

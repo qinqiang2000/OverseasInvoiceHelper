@@ -82,6 +82,20 @@ def ocr(doc_path, page_no):
     return text
 
 
+def ocr_img(doc_path):
+    # 预处理
+    # if ocr_vendor == 'ppocr':
+    #     up_image(dest_path, new_doc)
+
+    if ocr_vendor == 'ppocr':
+        text = pp_ocr(doc_path)
+    else:
+        text = ruizhen_ocr(doc_path)
+
+    print(text)
+    return text
+
+
 def pp_ocr(img_path):
     global paddle_ocr
     result = paddle_ocr.ocr(img_path)
