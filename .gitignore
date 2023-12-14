@@ -11,6 +11,7 @@
 # 忽略目标目录  
 target/  
 uploads/
+venv/
 
 # 忽略Python编译文件  
 *.pyc  
