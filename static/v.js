@@ -27,8 +27,10 @@ function log(...args) {
 
 document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('upload-btn').focus();
+  var hostname = window.location.hostname;
+  var port = window.location.port;
 
-  var socket = io.connect('http://' + '127.0.0.1' + ':' + '8000');
+  var socket = io.connect('http://' + hostname + ':' + port);
 
   socket.on('connect', function () {
     console.log('WebSocket connected!');
