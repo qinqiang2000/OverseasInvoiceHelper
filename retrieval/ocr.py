@@ -3,7 +3,6 @@ import os
 
 import fitz
 import requests
-from paddleocr import PaddleOCR
 
 from retrieval.ruizhen_ocr import ruizhen_ocr
 
@@ -16,6 +15,7 @@ USE_GPU = os.environ.get("PPOCR_USE_GPU") == "True"
 
 # 初始化一PaddleOCR,todo: 这里为省去启动时间，后续要考虑并发
 if ocr_vendor == 'ppocr':
+    from paddleocr import PaddleOCR
     paddle_ocr = PaddleOCR(use_angle_cls=True, use_gpu=USE_GPU, cpu_threads=8)
 
 
