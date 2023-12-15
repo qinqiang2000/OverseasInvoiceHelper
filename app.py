@@ -17,7 +17,7 @@ from retrieval.doc_loader import async_load
 load_dotenv(override=True)
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads/'
+app.config['UPLOAD_FOLDER'] = os.path.join(os.getcwd(), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 限制文件大小为16MB
 app.logger.setLevel(logging.DEBUG)
 
@@ -192,6 +192,7 @@ def process_data_and_emit_progress(filename):
 @app.route('/uploaded', methods=['GET'])
 def uploaded_file():
     filename = request.args.get('filepath')
+    print("uploaded_file: ", app.config['UPLOAD_FOLDER'], filename)
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 

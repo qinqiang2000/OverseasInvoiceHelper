@@ -6,7 +6,6 @@
 *.xls
 *.docx
 *.doc
-*.spec
 .env
 
 # 忽略目标目录  
