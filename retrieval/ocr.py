@@ -78,7 +78,7 @@ def ocr(doc_path, page_no):
     else:
         text = ruizhen_ocr(dest_path)
 
-    print(f"[{doc_path}] ocr result:\n {text}]")
+    logging.info(f"[{doc_path}] ocr result:\n {text}]")
     return text
 
 
@@ -92,6 +92,7 @@ def ocr_img(doc_path):
     else:
         text = ruizhen_ocr(doc_path)
 
+    logging.info(f"[{doc_path}] ocr result:\n {text}]")
     return text
 
 
