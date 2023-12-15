@@ -12,6 +12,8 @@
 target/  
 uploads/
 venv/
+dist/
+build/
 
 # 忽略Python编译文件  
 *.pyc  
