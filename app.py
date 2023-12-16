@@ -8,7 +8,6 @@ from flask_socketio import SocketIO
 
 import llm
 from data import ExcelHandler
-from llm import extract_invoice
 import threading
 import queue
 from retrieval.doc_loader import async_load
@@ -79,6 +78,7 @@ def handle_icon_click():
     excel_handler.save_dataframe_to_excel()
 
     return jsonify({'status': 'success'})
+
 
 # 切换llm通道和pdf解析方法，方便平时测试
 @app.route('/switch_channel', methods=['POST'])
@@ -164,7 +164,7 @@ def process_data_and_emit_progress(filename):
 
         # LLM提取要素
         pg.set_progress(int(75*page_no/total), f"正在LL提取第{page_no}页...")
-        ret = extract_invoice(text, filename)
+        ret = llm.extract_invoice(text, filename)
 
         # 完成一次任务，给前端发送进度
         info_data(ret, page_no)

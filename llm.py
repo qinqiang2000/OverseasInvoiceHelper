@@ -1,18 +1,13 @@
-import functools
 import json
-import logging
+import os
 import re
-import threading
-import time
-
-import requests
-from openai import OpenAI
-from dotenv import load_dotenv
 from enum import Enum
 from opencc import OpenCC
 
-load_dotenv(override=True)
-client = OpenAI()
+from provider.llm_gemini import LLMGemini
+from provider.llm_openai import LLMOpenAI
+from provider.llm_rpa_chatgpt import ChatGPTRPA
+
 packing_keywords = {"packing list", "packing slip", "Shipment Packlist", "装箱单", "Delivery Order", "送货单",
                     "attached-sheet", "WEIGHT MEMO", "清单明细", '清單明', "装箱明细", "装箱", "CONTENT LIST"}
 express_keywords = {"waybill", "way bill", "express world", "Delivery Note", "Delivery No", "收单",
@@ -81,12 +76,11 @@ class Channel(Enum):
     RPA = 2
     GPT4 = 3
     GPT35 = 4
+    GEMINI_PRO = 5
 
 
-channel = Channel.GPT4
-rpa_server_url = 'http://127.0.0.1:9999/api/'
-sem_rpa = threading.Semaphore(0)
-rpa_result = {}
+# 取环境变量LLM_MODEL的值，如果没有，则默认为GPT4
+channel = Channel(int(os.getenv("LLM_MODEL", Channel.GPT4.value)))
 
 
 def switch_channel(new_channel):
@@ -138,14 +132,6 @@ def after_extract(result):
     return json.dumps(ret, ensure_ascii=False, indent=4)
 
 
-def get_half(text):
-    lines = text.splitlines()
-    half_line_count = len(lines) // 2
-    first_half_lines = lines[:half_line_count]
-    second_half_lines = lines[half_line_count::]
-    return '\n'.join(first_half_lines), '\n'.join(second_half_lines)
-
-
 # 入口，包括事前、事中、事后处理
 def extract_invoice(text, text_id=""):
     # 事前
@@ -163,8 +149,6 @@ def extract_invoice(text, text_id=""):
 def extract(text, text_id=""):
     global template
     sys_prompt = template
-    # if is_markdown(text):
-    #     sys_prompt = template.format(text_format="Markdown格式的")
 
     if channel == Channel.MOCK:
         return """ {
@@ -177,33 +161,28 @@ def extract(text, text_id=""):
           "From": "KONG TAK ELECTRONIC CO., LTD."
         }"""
 
-    elif channel == Channel.RPA:
-        return rpa_extract(text, sys_prompt, text_id)
+    if channel == Channel.RPA:
+        rpa = ChatGPTRPA()
+        return rpa.generate_text(text, sys_prompt, text_id)
 
-    model = "gpt-3.5-turbo-1106"
+    if channel == channel.GPT35:
+        return LLMOpenAI("gpt-3.5-turbo-1106").generate_text(text, sys_prompt, text_id)
+
     if channel == channel.GPT4:
-        model = "gpt-4-1106-preview"
+        return LLMOpenAI("gpt-4-1106-preview").generate_text(text, sys_prompt, text_id)
 
-    print("使用模型API：", model, text_id)
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            response_format={"type": "json_object"},
-            temperature=0,
-            messages=[
-                {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": text}
-            ]
-        )
-    except Exception as e:
-        print(f"调用openai出错：{e}")
-        return json.dumps({"error": "fail: 调用大模型接口出错"})
+    if channel == channel.GEMINI_PRO:
+        return LLMGemini("gemini-pro").generate_text(text, sys_prompt, text_id)
 
-    print("total tokens:", response.usage.total_tokens)
-    print("system_fingerprint:", response.system_fingerprint)
-    print(response.choices[0].message.content)
+    return """ {"Doc Type": "LLM配置错误"}"""
 
-    return response.choices[0].message.content
+
+def get_half(text):
+    lines = text.splitlines()
+    half_line_count = len(lines) // 2
+    first_half_lines = lines[:half_line_count]
+    second_half_lines = lines[half_line_count::]
+    return '\n'.join(first_half_lines), '\n'.join(second_half_lines)
 
 
 def contain_keywords(text, excludes):
@@ -214,60 +193,3 @@ def contain_keywords(text, excludes):
 
     ret = pattern.search(text)
     return bool(ret)
-
-
-def rpa_extract(text, sys_prompt, reqid):
-    prompt = sys_prompt + "\n用户给的文档内容如下：\n```" + text + "\n```"
-    url = rpa_server_url + 'chat'
-    data = {'reqid': reqid, 'text': prompt}
-
-    try:
-        result = requests.post(url, json=data).json()
-    except Exception as e:
-        logging.error(f"调用RPA出错：{e}")
-        return json.dumps({"error": "fail: 调用RPA出错"})
-
-    if result['status'] == 'fail':
-        # 将json错误信息转成字符串，以便在前端显示
-        return json.dumps({"error": "fail: 要素提取程序错误"})
-
-    # 调用异步函数，并等待异步函数结束
-    schedule_get_request(reqid=reqid)
-
-    success = sem_rpa.acquire(timeout=69)
-    if not success:
-        return json.dumps({"error": f"等待超时：{reqid}要素提取程序错误"})
-
-    return rpa_result['reqid']
-
-
-# 定时执行 GET 请求的函数
-def schedule_get_request(reqid, interval=2):
-    if not send_get_request(reqid):
-        # 使用 functools.partial 来传递额外参数
-        threading.Timer(interval, functools.partial(schedule_get_request, reqid, interval)).start()
-
-
-def send_get_request(reqid):
-    url = rpa_server_url + 'find'
-    params = {'reqid': reqid}
-    response = requests.get(url, params=params)
-    result = response.json()
-
-    if result.get('data'):
-        data = result['data']['data']
-        print('Data received:', 'reqid:', result['data']['reqid'], '\n', data)
-
-        rpa_result['reqid'] = data
-        sem_rpa.release()
-        return True
-    else:
-        # print('No data yet.')
-        return False
-
-# text_to_check = """
-# """
-# if should_exclude(text_to_check):
-#     print("文本包含关键词")
-# else:
-#     print("文本不包含关键词")

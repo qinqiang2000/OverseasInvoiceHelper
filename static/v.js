@@ -26,7 +26,7 @@ function log(...args) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-  document.getElementById('upload-btn').focus();
+  document.getElementById('single-upload-btn').focus();
   var hostname = window.location.hostname;
   var port = window.location.port;
 
