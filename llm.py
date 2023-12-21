@@ -3,6 +3,7 @@ import os
 import re
 from enum import Enum
 from opencc import OpenCC
+from dateutil import parser
 
 from provider.llm_gemini import LLMGemini
 from provider.llm_openai import LLMOpenAI
@@ -13,8 +14,9 @@ packing_keywords = {"packing list", "packing slip", "Shipment Packlist", "装箱
 express_keywords = {"waybill", "way bill", "express world", "Delivery Note", "Delivery No", "收单",
                     "Certificate of Compliance", "FedEx.", "FedEx。"}
 logistics_keywords = {"LOGISTICS", "物流", "快递", "express world"}
-invoice_keywords = {"COMMERCIAL INVOICE", "Invoice Date", "INV.DATE", "Invoice No", "INV.NO", "Invoice Number"}
-invoice_packing_keywords1 = {"INVOICE & PACKING"}
+invoice_keywords = {"COMMERCIAL INVOICE", "Invoice Date", "INV.DATE", "Invoice No", "INV.NO", "Invoice Number",
+                    "Involce Date", "Involce No", "Involce Number"}
+invoice_packing_keywords1 = {"INVOICE & PACKING", "INVOICE / PACKING", "INVOICE  PACKING"}
 invoice_packing_keywords2 = {"Amount"}
 
 
@@ -48,11 +50,11 @@ init_keywords([packing_keywords, express_keywords, logistics_keywords, invoice_k
                invoice_packing_keywords1, invoice_packing_keywords2])
 
 template = """
-1. 根据用户给出的OCR的内容，识别出文档类型，提取并记录以下信息：
--文档类型（Doc Type）: 只有"Invoice"或其他。
+根据用户给出的OCR的内容，识别出文档类型，提取并记录以下信息：
+-文档类型（Doc Type）: 识别出是否"Invoice"类型，不是则返回"other"。
 -发票编号（Invoice No.）: 如果没有"Invoice No."，则查找"Invoice Number"。
 -发票日期（Invoice Date）。
--币种（Currency）: 应明确标出，例如 'USD'。
+-币种（Currency）: 应明确标出，例如CNY. USD. CAD. AUD. GBP等。
 -总金额（Amount）: 以数字类型提取，如果没有"Amount"，则找"Total Amount"或"Total Value"或其他类似的词语，找不到置为0。
 -收票方（Bill To）: 如果没有"Bill To"，则找'MESSRS'、'Purchaser' 、'Customer'或其他和'购买方'同义的词语；大小写不敏感。
 -开票方（From）: 如果没有"From" 信息, 或者不像一个公司名称，则找：'Account Name'、'Beneficiary Name'、底部签名处或标题; 大小写不敏感。
@@ -64,7 +66,7 @@ template = """
 -确保日期信息有正确空格。
 -如果找不到对应信息，则json的值置为空。
 -"Bill To" 或 "From" 如果有地址信息，删除它们。
--"Bill To" 或 "From" 如果没正确分词，对他们进行分词; 如果有中文，直接提取，不要翻译。
+-"Bill To" 或 "From" 或 "ship to" 如果没正确分词，对他们进行分词。
 -OCR的内容可能存在名词被切断、个别字母识别错误、对应错位等问题，你需要结合上下文语义进行综合判断，以抽取准确的关键信息。比如“Packing List”被识别成" Packihg
 List"或"PACKINGLIST"
 -仅输出JSON结果，不包含其他文字。
@@ -129,6 +131,9 @@ def after_extract(result):
         if key.lower() not in keys:
             ret.pop(key)
 
+    # 转换日期为统一格式
+    # ret["Invoice Date"] = convert_date(ret.get("Invoice Date"))
+
     return json.dumps(ret, ensure_ascii=False, indent=4)
 
 
@@ -183,6 +188,19 @@ def get_half(text):
     first_half_lines = lines[:half_line_count]
     second_half_lines = lines[half_line_count::]
     return '\n'.join(first_half_lines), '\n'.join(second_half_lines)
+
+
+def convert_date(date_str):
+    if date_str is None:
+        return date_str
+
+    try:
+        # 解析日期字符串
+        dt = parser.parse(date_str)
+        # 格式化为 YYYY-MM-DD
+        return dt.strftime('%Y-%m-%d')
+    except ValueError:
+        return date_str
 
 
 def contain_keywords(text, excludes):

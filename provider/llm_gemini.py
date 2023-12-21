@@ -9,47 +9,36 @@ logging.basicConfig(level=logging.INFO)
 load_dotenv(override=True)
 
 generation_config = {
-  "temperature": 0,
-  "top_p": 1,
-  "top_k": 1,
-  "max_output_tokens": 2048,
+    "temperature": 0,
+    "top_p": 1,
+    "top_k": 1,
+    "max_output_tokens": 2048,
 }
-safety_settings = [
-  {
-    "category": "HARM_CATEGORY_HARASSMENT",
-    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-  },
-  {
-    "category": "HARM_CATEGORY_HATE_SPEECH",
-    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-  },
-  {
-    "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-  },
-  {
-    "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-    "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-  }
-]
 
 genai.configure(api_key=os.environ['GEMINI_API_KEY'], transport="rest")
+
+
+def before_extract(text):
+    # 将text中的全角字符转换为半角字符
+    text = text.replace("（", " (").replace("）", ") ").replace("：", ":").replace("，", ",").replace("。", ".")
+    return text
 
 
 class LLMGemini:
     def __init__(self, model_name):
         self.model_name = model_name
         self.model = genai.GenerativeModel(model_name=model_name,
-                              generation_config=generation_config,
-                              safety_settings=safety_settings)
+                                           generation_config=generation_config)
 
     def generate_text(self, text, sys_prompt, reqid):
         logging.info(f"使用模型API：{self.model_name}, {reqid}")
+
+        text = before_extract(text)
         try:
-            prompt = (sys_prompt
-                      + "\n-\"Bill To\" 或 \"From\" 如果同时有中文和英文，只提取英文部分"
-                      +"\n用户给的内容如下：\n```\n" + text + "\n```")
-            response = self.model.generate_content(prompt)
+            prompt_parts = [sys_prompt
+                            + "\n-\"Bill To\" 、\"From\"或\"Ship To\" 如果同时有中文和英文，只提取英文部分;不要生成中文。\n"
+                            + "```\n" + text + "\n```"]
+            response = self.model.generate_content(prompt_parts)
             logging.info(f"{self.model_name}:{reqid} response: {response.text}")
 
             first_brace_index = response.text.find('{')

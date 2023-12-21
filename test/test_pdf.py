@@ -35,12 +35,9 @@ def list_path_fonts(pdf_path):
 
 # list_path_fonts('/Users/qinqiang02/job/test/发票测试数据')
 
-file_path = 'YOSUN 7723072318-7723072381.pdf'
-fonts = list_pdf_fonts(file_path)
-print(fonts)
-
 import pdfplumber
 import hashlib
+
 
 def calculate_image_hash(image_path):
     # 打开图像文件
@@ -52,8 +49,12 @@ def calculate_image_hash(image_path):
     hasher.update(image_data)
     return hasher.hexdigest()
 
+
 def extract_text_and_images(pdf_path):
     with pdfplumber.open(pdf_path) as pdf:
+        # 提取pdf_path路径
+        path = os.path.dirname(pdf_path)
+
         for page_num, page in enumerate(pdf.pages):
             # 提取文本
             text = page.extract_text()
@@ -61,6 +62,7 @@ def extract_text_and_images(pdf_path):
 
             # 提取图片
             im_list = page.images
+            print(f"Page {page_num + 1} contains {len(im_list)} images.")
             for im_index, im in enumerate(im_list, start=1):
                 # 提取图片的边界框
                 bbox = (im['x0'], im['top'], im['x1'], im['bottom'])
@@ -69,7 +71,22 @@ def extract_text_and_images(pdf_path):
                 # 提取并保存图片
                 image = cropped_page.to_image()
                 image_filename = f"page_{page_num + 1}_img_{im_index}.png"
-                image.save(image_filename, format="PNG")
-                print(f"Saved image: {image_filename}：hash：{calculate_image_hash(image_filename)}")
+                save_path = os.path.join(path, "img", image_filename)
+                # 如果目录不存在，则创建
+                if not os.path.exists(os.path.dirname(save_path)):
+                    os.makedirs(os.path.dirname(save_path))
 
+                try:
+                    image.save(save_path)
+                except Exception as e:
+                    print("保存图片失败", e)
+                    continue
+                print(f"Saved image: {image_filename}")
+
+
+file_path = '/Users/qinqiang02/job/test/发票测试数据/海信宽带供应商识别分类_70模板/FRONTEK TECHNOLOGY CORPORATION/AIT G323080443.pdf'
+# fonts = list_pdf_fonts(file_path)
+# print(fonts)
 extract_text_and_images(file_path)
+
+# extract_text_and_images(file_path)
