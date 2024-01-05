@@ -47,7 +47,7 @@ class LLMGemini:
             first_brace_index = response.text.find('{')
             last_brace_index = response.text.rfind('}')
             text = response.text[first_brace_index:last_brace_index + 1]
-            logging.info(f"{self.model_name}:{reqid} extract from response: {response.text}")
+            logging.info(f"{self.model_name}:{reqid} extract from response: {text}")
 
             return text
         except Exception as e:

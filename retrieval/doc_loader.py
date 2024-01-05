@@ -31,6 +31,7 @@ def async_load(doc_path, queue):
         logging.info(f"=========put to queue: {page.page_number}==========")
         queue.put((page.page_number, text, num_pages))
 
+    logging.info(f"========={doc_path}put to queue: finish==========")
     queue.put((-1, None, -1))
 
 

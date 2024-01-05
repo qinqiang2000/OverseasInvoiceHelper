@@ -78,7 +78,7 @@ def allowed_file(filename):
 def extract_invoice_content(doc_path):
     content = []
 
-    # 异步加载并识别文档
+    # 异步加载并识别文档，多页文档可以并行
     q = queue.Queue()
     threading.Thread(target=async_load, args=(doc_path, q,)).start()
     while True:
