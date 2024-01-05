@@ -9,3 +9,4 @@ python-dateutil==2.8.2
 openai==1.6.1
 requests==2.31.0
 PyMuPDF==1.23.8
+opencc-python-reimplemented==0.1.7
