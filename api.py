@@ -23,12 +23,7 @@ allowed_extensions = {'jpg', 'jpeg', 'png', 'pdf'}
 
 def load_tokens():
     """从文件加载令牌到集合中"""
-    file_path = 'tokens.txt'
-    # 检查文件是否存在，不存在时创建一个空文件
-    if not os.path.isfile(file_path):
-        open(file_path, 'a').close()
-
-    with open(file_path, 'r') as f:
+    with open('tokens.txt', 'r') as f:
         for line in f:
             tokens.add(line.strip())
 
