@@ -1,4 +1,5 @@
 import os
+import os.path as osp
 import pdfplumber
 from dotenv import load_dotenv
 import logging
@@ -14,7 +15,7 @@ fonts_list = os.getenv("KNOWN_FONTS").split(',')
 def async_load(doc_path, queue):
     # 非pdf文件，直接ocr
     if not doc_path.lower().endswith(".pdf"):
-        logging.info(f"=========put to queue: {doc_path}==========")
+        logging.info(f"put to queue: {osp.split(doc_path)[1]}")
         queue.put((1, ocr(doc_path, -1), 1))
         queue.put((-1, None, -1))
         return
@@ -28,10 +29,10 @@ def async_load(doc_path, queue):
         if not text or len(text) < 39 or len(page.images) > 0:  # 扫描件，39是一个经验值
             text = ocr(doc_path, page.page_number)
 
-        logging.info(f"========={doc_path}put to queue: {page.page_number}==========")
+        logging.info(f"[{osp.split(doc_path)[1]}] put to queue: {page.page_number}")
         queue.put((page.page_number, text, num_pages))
 
-    logging.info(f"========={doc_path}put to queue: finish==========")
+    logging.info(f"[{osp.split(doc_path)[1]}] put to queue: finish")
     queue.put((-1, None, -1))
 
 
