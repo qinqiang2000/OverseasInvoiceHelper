@@ -134,6 +134,9 @@ def after_extract(result):
     # 转换日期为统一格式
     # ret["Invoice Date"] = convert_date(ret.get("Invoice Date"))
 
+    # 遍历字典，并替换每个值中的换行符
+    ret = {key: value.replace('\n', ' ') if isinstance(value, str) else value for key, value in ret.items()}
+
     return json.dumps(ret, ensure_ascii=False, indent=4)
 
 
