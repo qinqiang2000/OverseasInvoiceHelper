@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 from flask import Flask, request, render_template, send_from_directory, jsonify
 from flask_socketio import SocketIO
 
-import llm
-from data import ExcelHandler
+from provider import llm
+from labeling.data import ExcelHandler
 import threading
 import queue
 from retrieval.doc_loader import async_load
@@ -134,21 +134,23 @@ def upload_file():
             os.makedirs(os.path.dirname(file_path))
         file.save(file_path)
 
-        socketio.start_background_task(process_data_and_emit_progress, filename)
+        socketio.start_background_task(process_data_and_emit_progress
+                                       , os.path.join(app.config['UPLOAD_FOLDER'], filename))
         app.logger.debug(f"保存{file.filename}")
 
         return jsonify({'filename': filename})
         # return render_template('pdf_viewer.html', filename=filename)
 
 
-def process_data_and_emit_progress(filename):
+def process_data_and_emit_progress(doc_path):
+    # 获取文件名
+    filename = os.path.basename(doc_path)
     # 创建一个进度条
     pg = Progress(filename)
-
     # 创建一个队列用于和文档load线程通信
     q = queue.Queue()
+
     # 异步加载文档
-    doc_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     threading.Thread(target=async_load, args=(doc_path, q,)).start()
     page_no = 0
     total = None
@@ -163,7 +165,7 @@ def process_data_and_emit_progress(filename):
             break
 
         # LLM提取要素
-        pg.set_progress(int(75*page_no/total), f"正在LL提取第{page_no}页...")
+        pg.set_progress(int(75*page_no/total), f"正在LLM提取第{page_no}页...")
         ret = llm.extract_invoice(text, filename)
 
         # 完成一次任务，给前端发送进度

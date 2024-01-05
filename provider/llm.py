@@ -54,7 +54,7 @@ template = """
 -文档类型（Doc Type）: 识别出是否"Invoice"类型，不是则返回"other"。
 -发票编号（Invoice No.）: 如果没有"Invoice No."，则查找"Invoice Number"。
 -发票日期（Invoice Date）。
--币种（Currency）: 应明确标出，例如CNY. USD. CAD. AUD. GBP等。
+-币种（Currency）: 应明确标出，例如CNY. USD. CAD. AUD. GBP等
 -总金额（Amount）: 以数字类型提取，如果没有"Amount"，则找"Total Amount"或"Total Value"或其他类似的词语，找不到置为0。
 -收票方（Bill To）: 如果没有"Bill To"，则找'MESSRS'、'Purchaser' 、'Customer'或其他和'购买方'同义的词语；大小写不敏感。
 -开票方（From）: 如果没有"From" 信息, 或者不像一个公司名称，则找：'Account Name'、'Beneficiary Name'、底部签名处或标题; 大小写不敏感。
@@ -97,12 +97,12 @@ def before_extract(text):
     if contain_keywords(first_half, packing_keywords):
         if not contain_keywords(first_half, invoice_packing_keywords1) and not contain_keywords(second_half,
                                                                                                 invoice_packing_keywords2):
-            return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他"}, ensure_ascii=False, indent=4)
+            return json.dumps({"Doc Type": "others"}, ensure_ascii=False, indent=4)
 
     # 如果是waybill或express的，则再检查一次不是发票，才返回
     if contain_keywords(text, express_keywords):
         if not contain_keywords(text, invoice_keywords):
-            return json.dumps({"Doc Type": "非发票：可能是装货单、waybill或其他"}, ensure_ascii=False, indent=4)
+            return json.dumps({"Doc Type": "others"}, ensure_ascii=False, indent=4)
 
     return None
 

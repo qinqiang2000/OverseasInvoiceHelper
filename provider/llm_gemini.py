@@ -4,7 +4,7 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv(override=True)
 
@@ -36,8 +36,11 @@ class LLMGemini:
         text = before_extract(text)
         try:
             prompt_parts = [sys_prompt
-                            + "\n-\"Bill To\" 、\"From\"或\"Ship To\" 如果同时有中文和英文，只提取英文部分;不要生成中文。\n"
+                            + "\n-\"Bill To\" 、\"From\"或\"Ship To\" 如果同时有中文和英文，只提取英文部分;不要生成中文;\n"
+                            + "-\"Bill To\" 、\"From\"或\"Ship To\": 只提取公司名称，不要提取地址;\n"
+                            # + "\n-\"Bill To\" 、\"From\"或\"Ship To\": 删除其中的换行符'\\n';\n"
                             + "```\n" + text + "\n```"]
+            logging.info(f"{self.model_name}:{reqid} prompt_parts: {prompt_parts}")
             response = self.model.generate_content(prompt_parts)
             logging.info(f"{self.model_name}:{reqid} response: {response.text}")
 

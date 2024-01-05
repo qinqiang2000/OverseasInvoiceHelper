@@ -35,3 +35,5 @@ build/
 *.tmp
 *.xlsb
 *.xlsm.backup
+
+tokens.txt

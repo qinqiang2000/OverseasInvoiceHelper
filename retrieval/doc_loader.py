@@ -2,18 +2,20 @@ import os
 import pdfplumber
 from dotenv import load_dotenv
 import logging
-from retrieval.ocr import ocr, ocr_img
+from retrieval.ocr import ocr
 
 logging.basicConfig(format='[%(asctime)s %(filename)s:%(lineno)d] %(levelname)s: %(message)s', level=logging.INFO, force=True)
 load_dotenv(override=True)
 fonts_list = os.getenv("KNOWN_FONTS").split(',')
 
 
+# 异步读取文档，将结果放入队列
+# 队列元素是一个三元组：(页码, 识别结果, 总页数)； 页码为-1表示结束
 def async_load(doc_path, queue):
     # 非pdf文件，直接ocr
     if not doc_path.lower().endswith(".pdf"):
         logging.info(f"=========put to queue: {doc_path}==========")
-        queue.put((1, ocr_img(doc_path), 1))
+        queue.put((1, ocr(doc_path, -1), 1))
         queue.put((-1, None, -1))
         return
 
