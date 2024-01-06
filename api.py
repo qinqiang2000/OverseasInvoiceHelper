@@ -21,9 +21,13 @@ upload_folder = osp.join(os.getcwd(), 'uploads')
 allowed_extensions = {'jpg', 'jpeg', 'png', 'pdf'}
 
 
-def load_tokens():
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
+
+
+def load_keys():
     """从文件加载令牌到集合中"""
-    with open('tokens.txt', 'r') as f:
+    with open('keys.txt', 'r') as f:
         for line in f:
             tokens.add(line.strip())
 
@@ -34,6 +38,7 @@ def verify_token(token):
 
 
 def require_auth(f):
+    """认证"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         auth_header = request.headers.get('Authorization')
@@ -46,11 +51,11 @@ def require_auth(f):
             return std_response(errcode="0403", description="Invalid token", status_code=403)
 
         return f(token, *args, **kwargs)
-
     return decorated_function
 
 
 def handle_exceptions(f):
+    """统一异常处理"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
@@ -58,7 +63,6 @@ def handle_exceptions(f):
         except Exception as e:
             logging.info(f"Exception: {e}")
             return std_response(errcode="9999", description=str(e))
-
     return decorated_function
 
 
@@ -71,11 +75,8 @@ def std_response(data=None, errcode="0000", description="操作成功", status_c
     return make_response(jsonify(response), status_code)
 
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
-
-
 def extract_invoice_content(doc_path):
+    """提取发票内容"""
     content = []
 
     # 异步加载并识别文档，多页文档可以并行
@@ -139,7 +140,7 @@ def invoice(token):
 
 
 # 从文件加载令牌。需要在服务器启动之前调用
-load_tokens()
+load_keys()
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=80)
