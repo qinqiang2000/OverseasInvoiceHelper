@@ -1,6 +1,7 @@
 import os
 
 import fitz  # PyMuPDF
+import pdfplumber
 
 all_fonts = set()  # 使用集合来避免重复
 
@@ -16,6 +17,12 @@ def list_pdf_fonts(pdf_path):
 
     doc.close()
     return all_fonts
+
+
+def list_pdf_fonts_pdfdumper(pdf_path):
+    pdf = pdfplumber.open(pdf_path)
+
+    print(set(char["fontname"] for char in pdf.chars))
 
 
 def list_path_fonts(pdf_path):
@@ -84,9 +91,10 @@ def extract_text_and_images(pdf_path):
                 print(f"Saved image: {image_filename}")
 
 
-file_path = '/Users/qinqiang02/job/test/发票测试数据/海信宽带供应商识别分类_70模板/FRONTEK TECHNOLOGY CORPORATION/AIT G323080443.pdf'
-# fonts = list_pdf_fonts(file_path)
-# print(fonts)
-extract_text_and_images(file_path)
-
+# file_path = '/Users/qinqiang02/job/test/发票测试数据/海外形式发票/海信宽带供应商识别分类_70模板/FRONTEK TECHNOLOGY CORPORATION/AIT G323080443.pdf'
+file_path = '/Users/qinqiang02/job/test/发票测试数据/海外形式发票/越南发票/发票17.pdf'
+fonts = list_pdf_fonts(file_path)
+print(fonts)
+# extract_text_and_images(file_path)
+# list_pdf_fonts_pdfdumper(file_path)
 # extract_text_and_images(file_path)

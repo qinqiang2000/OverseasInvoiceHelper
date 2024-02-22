@@ -26,7 +26,8 @@ def async_load(doc_path, queue):
         text = page.extract_text()
 
         # todo: 校验字体
-        if not text or len(text) < 39 or len(page.images) > 0:  # 扫描件，39是一个经验值
+        if not text or len(text) < 39 or len(page.images) > 5:  # 扫描件，39是一个经验值
+            logging.info(f"扫描件[{osp.split(doc_path)[1]}]: len(text)[{len(text)}], len(images)[{len(page.images)}]")
             text = ocr(doc_path, page.page_number)
 
         logging.info(f"[{osp.split(doc_path)[1]}] put to queue: {page.page_number}")

@@ -8,6 +8,7 @@ import time
 
 app_key = "s60gby076vd6qqgd"
 secret = os.environ.get("RUIZHEN_APP_SECRET")
+language = os.environ.get("RUIZHEN_OCR_LANG", "eng")
 url = "https://api.regenai.com/v1/general/fetch"
 
 
@@ -46,7 +47,7 @@ def ruizhen_ocr(img_path):
             'app_key': app_key,
             'token': token,
             "timestamp": timestamp,
-            'language': 'eng',
+            'language': language,
         }
 
         # 发送POST请求

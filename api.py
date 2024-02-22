@@ -43,12 +43,12 @@ def require_auth(f):
     def decorated_function(*args, **kwargs):
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith("Bearer "):
-            return std_response(errcode="0401", description="Authorization header missing or invalid", status_code=401)
+            return std_response(errcode="A0401", description="Authorization header missing or invalid", status_code=401)
             # abort(401, description="Authorization header missing or invalid")
 
         token = auth_header.split(" ")[1]
         if not verify_token(token):
-            return std_response(errcode="0403", description="Invalid token", status_code=403)
+            return std_response(errcode="A0312", description="Invalid token", status_code=403)
 
         return f(token, *args, **kwargs)
     return decorated_function
@@ -62,7 +62,7 @@ def handle_exceptions(f):
             return f(*args, **kwargs)
         except Exception as e:
             logging.info(f"Exception: {e}")
-            return std_response(errcode="9999", description=str(e))
+            return std_response(errcode="B0001", description=str(e))
     return decorated_function
 
 
@@ -102,12 +102,12 @@ def extract_invoice_content(doc_path):
 def invoice(token):
     if 'file' not in request.files:
         logging.warning("没有收到文件")
-        return std_response(None, "0001", "没有收到文件")
+        return std_response(None, "A0401", "没有收到文件")
 
     file = request.files['file']
     if not file or not allowed_file(file.filename):
         logging.warning(f"非法文件:{file.filename}")
-        return std_response(None, "0002", f"非法文件，只能接受：{allowed_extensions}")
+        return std_response(None, "A0421", f"非法文件，只能接受：{allowed_extensions}")
 
     # 计算该文件的hash值
     file_hash = hashlib.md5(file.read()).hexdigest()

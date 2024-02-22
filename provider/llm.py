@@ -5,6 +5,7 @@ from enum import Enum
 from opencc import OpenCC
 from dateutil import parser
 
+from provider.llm_azure import LLMAzureOpenAI
 from provider.llm_gemini import LLMGemini
 from provider.llm_openai import LLMOpenAI
 from provider.llm_rpa_chatgpt import ChatGPTRPA
@@ -57,6 +58,7 @@ class Channel(Enum):
     GPT4 = 3
     GPT35 = 4
     GEMINI_PRO = 5
+    AZURE_OPENAI = 6
 
 
 # 取环境变量LLM_MODEL的值，如果没有，则默认为GPT4
@@ -87,7 +89,11 @@ def before_extract(text):
 
 # 后处理
 def after_extract(result):
-    ret = json.loads(result)
+    try:
+        ret = json.loads(result)
+    except Exception as e:
+        print(f"json.loads出错：{e}")
+        return """ {"Doc Type": "json.loads出错"}"""
 
     ship_to = ret.get("Ship To")
     bill_to = ret.get("Bill To")
@@ -156,6 +162,9 @@ def extract(text, text_id=""):
 
     if channel == channel.GEMINI_PRO:
         return LLMGemini("gemini-pro").generate_text(text, base_prompt, text_id)
+
+    if channel == channel.AZURE_OPENAI:
+        return LLMAzureOpenAI().generate_text(text, base_prompt, text_id)
 
     return """ {"Doc Type": "LLM配置错误"}"""
 
