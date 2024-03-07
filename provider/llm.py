@@ -7,7 +7,7 @@ from dateutil import parser
 
 from provider.llm_azure import LLMAzureOpenAI
 from provider.llm_gemini import LLMGemini
-from provider.llm_moonshot import LLMMoonshot
+# from provider.llm_moonshot import LLMMoonshot
 from provider.llm_openai import LLMOpenAI
 from provider.llm_rpa_chatgpt import ChatGPTRPA
 from provider.prompt import base_prompt
@@ -60,7 +60,7 @@ class Channel(Enum):
     GPT35 = 4
     GEMINI_PRO = 5
     AZURE_OPENAI = 6
-    MOONSHOT = 7
+    # MOONSHOT = 7
 
 
 # 取环境变量LLM_MODEL的值，如果没有，则默认为GPT4
@@ -168,8 +168,8 @@ def extract(text, text_id=""):
     if channel == channel.AZURE_OPENAI:
         return LLMAzureOpenAI().generate_text(text, base_prompt, text_id)
 
-    if channel == channel.MOONSHOT:
-        return LLMMoonshot("moonshot-v1-8k").generate_text(text, base_prompt, text_id)
+    # if channel == channel.MOONSHOT:
+    #     return LLMMoonshot("moonshot-v1-8k").generate_text(text, base_prompt, text_id)
     return """ {"Doc Type": "LLM配置错误"}"""
 
 
