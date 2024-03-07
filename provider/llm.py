@@ -7,6 +7,7 @@ from dateutil import parser
 
 from provider.llm_azure import LLMAzureOpenAI
 from provider.llm_gemini import LLMGemini
+from provider.llm_moonshot import LLMMoonshot
 from provider.llm_openai import LLMOpenAI
 from provider.llm_rpa_chatgpt import ChatGPTRPA
 from provider.prompt import base_prompt
@@ -59,6 +60,7 @@ class Channel(Enum):
     GPT35 = 4
     GEMINI_PRO = 5
     AZURE_OPENAI = 6
+    MOONSHOT = 7
 
 
 # 取环境变量LLM_MODEL的值，如果没有，则默认为GPT4
@@ -107,7 +109,7 @@ def after_extract(result):
     if "Ship To" in ret:
         ret.pop("Ship To")
 
-    keys = ["Doc Type", "Invoice No.", "Invoice Date", "Currency", "Amount", "Bill To", "From"]
+    keys = ["Doc Type", "Invoice No.", "Invoice Date", "Currency", "Amount", "Bill To", "From", "error"]
     keys = [key.lower() for key in keys]
 
     # 遍历ret，如果有key不在keys中，则删除
@@ -166,6 +168,8 @@ def extract(text, text_id=""):
     if channel == channel.AZURE_OPENAI:
         return LLMAzureOpenAI().generate_text(text, base_prompt, text_id)
 
+    if channel == channel.MOONSHOT:
+        return LLMMoonshot("moonshot-v1-8k").generate_text(text, base_prompt, text_id)
     return """ {"Doc Type": "LLM配置错误"}"""
 
 
